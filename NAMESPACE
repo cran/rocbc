@@ -1,0 +1,11 @@
+exportPattern("^[[:alpha:]]+")
+importFrom("grDevices", "x11")
+importFrom("graphics", "hist", "legend", "lines", "par", "plot.new",
+           "points", "title")
+importFrom("stats", "cov", "dnorm", "na.omit", "optim", "optimize",
+           "pnorm", "qchisq", "qnorm", "qqline", "qqnorm", "sd",
+           "shapiro.test", "var")
+importFrom("pracma", "std", "linspace", "fminsearch", "inv", "zeros", "erfcinv")
+importFrom("clinfun", "roc.curve")
+importFrom("splancs", "areapl")
+importFrom("mvtnorm", "rmvnorm", "dmvnorm")
