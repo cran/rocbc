@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 
-<title>  word_document: default</title>
+<title>About the Package</title>
 
 <script type="text/javascript">
 window.onload = function() {
@@ -204,18 +204,7 @@ hr {
 </head>
 
 <body>
-<hr/>
-
-<p>title: &ldquo;rocbc&rdquo;
-author: &ldquo;Leonidas Bantis&rdquo;
-date: &ldquo;12/29/2021&rdquo;
-output:
-  html_document: default
-  pdf_document: default</p>
-
-<h2>  word_document: default</h2>
-
-<h2>About the rocbc package</h2>
+<h2>About the Package</h2>
 
 <p>This package is focused on Box-Cox based ROC curves and provides point estimates, confidence intervals (CIs), and hypothesis tests. It can be used both for inferences for a single biomarker and when comparisons of two correlated biomarkers are of interest. It provides inferences and comparisons around the area under the ROC curve (AUC), the Youden index, the sensitivity at a given specificity level (and vice versa), the optimal operating point of the ROC curve (in the Youden sense), and the Youden based cutoff. This documentation consists of two parts, the one marker and the two marker case. All approaches presented herein have been recently published (see references for each function).</p>
 
@@ -252,7 +241,7 @@ output:
 <li> This function tests whether the Box-Cox transformation is able to achieve approximate normality for your data. That is, it will allow the user to know whether it is appropriate to use all the methods discussed later on in this package. </li>
 </ul></li>
 <li><p><strong>Usage</strong><br/>
-\ \ \ \ \ \ <code>checkboxcox(marker, D, plots, printShapiro = TRUE)</code></p></li>
+<code>checkboxcox(marker, D, plots, printShapiro = TRUE)</code></p></li>
 <li><p><strong>Arguments</strong>  </p>
 
 <ul>
@@ -342,7 +331,7 @@ out=checkboxcox(marker=scores, D, plots=&quot;on&quot;, printShapiro = TRUE)
 <li> This function applies the Box-Cox transformation to provide a comprehensive ROC analysis that involves the AUC (and its CI), the maximized Youden index (and its CI), the optimized Youden based cutoff (and its CI), and joint confidence regions for the optimized pair of sensitivity and specificity. For the AUC and the Youden index, the Delta Method is employed by accounting for the variability of the estimated transformation parameters due to the Box-Cox transformation. Both the AUC and the YI confidence intervals are found after using the probit transformation and back-transforming the endpoints of the corresponding CI back into the ROC space. For the cutoffs, it has been shown that the delta method does not perform well; thus, the bootstrap with 1,000 repetitions is employed here, instead. During this this process, the cutoffs are back-transformed with the inverse Box-Cox transformation so that they lie on the original scale of the data.</li>
 </ul></li>
 <li><p><strong>Usage</strong><br/>
-\ \ \ \ \ \ <code>rocboxcox(marker, D, plots, printProgress = TRUE)</code></p></li>
+<code>rocboxcox(marker, D, plots, printProgress = TRUE)</code></p></li>
 <li><p><strong>Arguments</strong>  </p>
 
 <ul>
@@ -404,8 +393,12 @@ out=rocboxcox(marker=scores,D, 0.05, plots=&quot;on&quot;, printProgress=FALSE)
 <li> This function applies the Box-Cox transformation and carries out statistical inferences for the sensitivity at a given specificity (and vice versa). </li>
 </ul></li>
 <li><p><strong>Usage</strong><br/>
-\ \ \ \ \ \ <code>out=rocboxcoxCI(marker, D, givenSP=givenSP, givenSE=NA, alpha, plots)</code>
-\ \ \ \ \ \ <code>out=rocboxcoxCI(marker, D, givenSP=NA, givenSE=givenSE, alpha, plots)</code></p></li>
+<code>out=rocboxcoxCI(marker, D, givenSP=givenSP, givenSE=NA, alpha, plots)</code></p></li>
+</ul>
+
+<p><code>out=rocboxcoxCI(marker, D, givenSP=NA, givenSE=givenSE, alpha, plots)</code></p>
+
+<ul>
 <li><p><strong>Arguments</strong>  </p>
 
 <ul>
@@ -450,7 +443,7 @@ out=rocboxcoxCI(marker=scores ,D, givenSP=givenSP, givenSE=NA, alpha=0.05, plots
 <li> This function provides a comparison of two correlated markers in terms of their AUCs (areas under the Box-Cox based ROC curves). Marker measurements are assumed to be taken on the same individuals for both markers. </li>
 </ul></li>
 <li><p><strong>Usage</strong><br/>
-\ \ \ \ \ \ <code>out=comparebcAUC(marker1, marker2, D, alpha, plots)</code></p></li>
+<code>out=comparebcAUC(marker1, marker2, D, alpha, plots)</code></p></li>
 <li><p><strong>Arguments</strong>  </p>
 
 <ul>
@@ -465,9 +458,9 @@ out=rocboxcoxCI(marker=scores ,D, givenSP=givenSP, givenSE=NA, alpha=0.05, plots
 <ul>
 <li><code>AUCmarker1</code>: the AUC of the first marker</li>
 <li><code>AUCmarker2</code>: the AUC of the second marker</li>
-<li><code>pvalue_probit_difference</code>: the p-value for the comparison of the AUCs. It employs the probit transformation that has greater power then when not using it (as opposed to the p-value provided in the &#39;pvalue<em>difference&#39; output argument provided later on). It is based on $Z<sup>*=\frac{\Phi<sup>{-1}\left(\hat{AUC}</sup></sup></em>{1}\right)-\Phi<sup>{-1}\left(\hat{AUC}<em>{2}\right)}{\sqrt{Var\left(\Phi<sup>{-1}\left(\hat{AUC}</sup></em>{1}\right)\right)+Var\left(\Phi<sup>{-1}\left(\hat{AUC}<em>{2}\right)\right)-2Cov\left(\Phi<sup>{-1}\left(\hat{AUC}</sup></em>{1}\right)),\Phi<sup>{-1}\left(\hat{AUC}_{2}\right)\right)}}$.</sup></sup></sup></li>
+<li><code>pvalue_probit_difference</code>: the p-value for the comparison of the AUCs. It employs the probit transformation that has greater power then when not using it (as opposed to the p-value provided in the &#39;pvalue difference&#39; output argument provided later on). It is based on \(Z^*=\frac{\Phi^{-1}\left(\hat{AUC}_{1}\right)-\Phi^{-1}\left(\hat{AUC}_{2}\right)}{\sqrt{Var\left(\Phi^{-1}\left(\hat{AUC}_{1}\right)\right)+Var\left(\Phi^{-1}\left(\hat{AUC}_{2}\right)\right)-2Cov\left(\Phi^{-1}\left(\hat{AUC}_{1}\right)),\Phi^{-1}\left(\hat{AUC}_{2}\right)\right)}}\).</li>
 <li><code>CI_probit_difference</code>: the confidence interval for the difference of the probits of the AUCs. (corresponds to the same strategy as the &#39;pvalue_probit_difference&#39;). It is also based on \(Z^*\) given above.</li>
-<li><code>pvalue_difference</code>: the p-value for the comparisons of the AUC (without the probit transformation). Simulations have shown that this is inferior to the &#39;pvalue<em>probit_difference&#39;. This is based on $Z=\frac{\hat{AUC}</em>{1}-\hat{AUC}<em>{2}}{\sqrt{Var\left(\hat{AUC}</em>{1}\right)+Var\left(\hat{AUC}<em>{2}\right)-2Cov\left(\hat{AUC}</em>{1},\hat{AUC}_{2}\right)}}$.</li>
+<li><code>pvalue_difference</code>: the p-value for the comparisons of the AUC (without the probit transformation). Simulations have shown that this is inferior to the &#39;pvalue probit difference&#39;. This is based on \(Z=\frac{\hat{AUC}_{1}-\hat{AUC}_{2}}{\sqrt{Var\left(\hat{AUC}_{1}\right)+Var\left(\hat{AUC}_{2}\right)-2Cov\left(\hat{AUC}_{1},\hat{AUC}_{2}\right)}}\).</li>
 <li><code>CI_difference</code>: the confidence interval for the difference of the AUCs. It is based on \(Z\) given above.</li>
 <li><code>roc1</code>: a function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.</li>
 <li><code>roc2</code>: a function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.</li>
@@ -529,7 +522,7 @@ out=comparebcAUC(marker1, marker2, D, alpha=0.05,  plots=&quot;on&quot;)
 <li> This function provides a comparison of two correlated markers in terms of their J (Youden indices for Box-Cox based ROC curves). Markers measurements are assumed to be taken on the same individuals for both markers. </li>
 </ul></li>
 <li><p><strong>Usage</strong><br/>
-\ \ \ \ \ \ <code>out=comparebcJ(marker1, marker2, D, alpha, plots)</code></p></li>
+<code>out=comparebcJ(marker1, marker2, D, alpha, plots)</code></p></li>
 <li><p><strong>Arguments</strong>  </p>
 
 <ul>
@@ -544,9 +537,9 @@ out=comparebcAUC(marker1, marker2, D, alpha=0.05,  plots=&quot;on&quot;)
 <ul>
 <li><code>J1</code>: The maximized Youden index (J) of the first marker.</li>
 <li><code>J2</code>: The maximized Youden index (J) of the second marker.</li>
-<li><code>pvalue_transJ_difference</code>: The p-value for the comparison of the Js. It employs the probit transformation that has greater power then when not using it (as opposed to the p-value provided in the &#39;pvalue<em>difference&#39; output argument provided later on). It is based on $Z<sup>{*}=\frac{\hat{J}</sup></em>{T2}-\hat{J}<em>{T1}}{\sqrt{Var(\hat{J}</em>{T1})+Var(\hat{J}<em>{T2})-2Cov(\hat{J}</em>{T1},\hat{J}<em>{T2})}}$ where $\hat{J}</em>{Ti}=\Phi<sup>{-1}(\hat{J}_{i})$,</sup> \(i=1,2\).</li>
+<li><code>pvalue_transJ_difference</code>: The p-value for the comparison of the Js. It employs the probit transformation that has greater power then when not using it (as opposed to the p-value provided in the &#39;pvalue difference&#39; output argument provided later on). It is based on \(Z^{*}=\frac{\hat{J}_{T2}-\hat{J}_{T1}}{\sqrt{Var(\hat{J}_{T1})+Var(\hat{J}_{T2})-2Cov(\hat{J}_{T1},\hat{J}_{T2})}}\) where \(\hat{J}_{Ti}=\Phi^{-1}(\hat{J}_{i})\), \(i=1,2\).</li>
 <li><code>CI_trans_difference</code>: The confidence interval for the difference of the transformed Js. (Corresponds to the same strategy as the &#39;pvalue_trans_difference&#39; and is based on \(Z^*\) mentioned above).</li>
-<li><code>pvalue_difference</code>: The p-value for the comparisons of the J (without the probit transformation). Simulations have shown that this is inferior to the &#39;pvalue<em>probit_difference&#39;. This is based on $Z=\frac{\hat{J}</em>{2}-\hat{J}<em>{1}}{\sqrt{Var(\hat{J}</em>{1})+Var(\hat{J}<em>{2})-2Cov(\hat{J}</em>{1},\hat{J}_{T})}}$.</li>
+<li><code>pvalue_difference</code>: The p-value for the comparisons of the J (without the probit transformation). Simulations have shown that this is inferior to the &#39;pvalue probit difference&#39;. This is based on \(Z=\frac{\hat{J}_{2}-\hat{J}_{1}}{\sqrt{Var(\hat{J}_{1})+Var(\hat{J}_{2})-2Cov(\hat{J}_{1},\hat{J}_{T})}}\).</li>
 <li><code>CI_difference</code>: The confidence interval for the difference of the Js. This is based on \(Z\) mentioned right above. </li>
 <li><code>roc1</code>: A function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.</li>
 <li><code>roc2</code>: A function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.</li>
@@ -582,7 +575,7 @@ out=comparebcJ(marker1, marker2, D, alpha=0.05,  plots=&quot;on&quot;)
 <li> This function provides a comparison of two correlated markers in terms of their sensitivities at a given specificity (for Box-Cox based ROC curves). Marker measurements are assumed to be taken on the same individuals for both markers. </li>
 </ul></li>
 <li><p><strong>Usage</strong><br/>
-\ \ \ \ \ \ <code>out=comparebcSens(marker1, marker2, D, alpha, atSpec, plots)</code></p></li>
+<code>out=comparebcSens(marker1, marker2, D, alpha, atSpec, plots)</code></p></li>
 <li><p><strong>Arguments</strong>  </p>
 
 <ul>
@@ -654,7 +647,7 @@ out=comparebcJ(marker1, marker2, D, alpha=0.05,  plots=&quot;on&quot;)
 <li> This function provides a comparison of two correlated markers in terms of their specificities at a given sensitivity (for Box-Cox based ROC curves). Marker measurements are assumed to be taken on the same individuals for both markers. </li>
 </ul></li>
 <li><p><strong>Usage</strong><br/>
-\ \ \ \ \ \ <code>out=comparebcSpec(marker1, marker2, D, alpha, atSens, plots)</code></p></li>
+<code>out=comparebcSpec(marker1, marker2, D, alpha, atSens, plots)</code></p></li>
 <li><p><strong>Arguments</strong>  </p>
 
 <ul>

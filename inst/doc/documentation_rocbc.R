@@ -18,6 +18,7 @@ library(pracma)
 library(clinfun)
 library(splancs)
 library(mvtnorm)
+library(matlab)
 
 ## ---- echo=FALSE, eval=TRUE---------------------------------------------------
 
