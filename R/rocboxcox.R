@@ -9,6 +9,8 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     stop("ERROR: Please remove all missing data before running this function.")
   } else if (alpha <= 0 | alpha >= 1) {
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
+  } else if (min(marker<= 0)) {
+    stop("ERROR: All marker scores need to be positive")
   } else {
 
     x=marker[D==0]
@@ -96,7 +98,11 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     #title(main="                                         for Y")
 
     roc<-function(t,x,y){
-      1-pnorm(qnorm(1-t,mean=mean(transx),sd=std(transx)),mean=mean(transy),sd=std(transy))
+      1-pnorm(qnorm(1-t,
+                    mean=mean(transx),
+                    sd=std(transx)*(length(transx)-1)/(length(transx))),
+              mean=mean(transy),
+              sd=std(transy)*(length(transy)-1)/(length(transy)))
     }
 
     rocuseless<-function(t){
@@ -110,11 +116,11 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
       title(main=txt)
 
     }
-    rocfun=function(t){1-pnorm(qnorm(1-t,mean=mean(transx),sd=std(transx)),mean=mean(transy),sd=std(transy))}
+    rocfun=function(t){1-pnorm(qnorm(1-t,mean=mean(transx),sd=std(transx)*(length(transx)-1)/(length(transx))),mean=mean(transy),sd=std(transy)*(length(transy)-1)/(length(transy)))}
     m1hat=mean(transx)
     m2hat=mean(transy)
-    s1hat=std(transx)
-    s2hat=std(transy)
+    s1hat=std(transx)*(length(transx)-1)/(length(transx))
+    s2hat=std(transy)*(length(transx)-1)/(length(transx))
     n1=length(x)
     n2=length(y)
 
@@ -284,6 +290,10 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     sx=s1hat;
     sy=s2hat;
     c=cutoff;
+
+    b=sy/sx;
+    a=my-mx;
+
     Jhat=pnorm((m2hat-cutoff)/s2hat)+pnorm((cutoff-m1hat)/s1hat)-1;
     radd=a^2+(b^2-1)*sx^2*log(b^2);
     zy=(my-c)/sy;
@@ -315,8 +325,12 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
 
     CIstar=c(Jstar-Za*sqrt(varJstar), Jstar+Za*sqrt(varJstar));
     CI=c(0,0)
-    CI[1]=exp(CIstar[1])/(1+exp(CIstar[1]))*2-1
-    CI[2]=exp(CIstar[2])/(1+exp(CIstar[2]))*2-1
+    #CI[1]=exp(CIstar[1])/(1+exp(CIstar[1]))*2-1
+    #CI[2]=exp(CIstar[2])/(1+exp(CIstar[2]))*2-1
+
+    CI[1]=pnorm(CIstar[1])
+    CI[2]=pnorm(CIstar[2])
+
     CIJ=CI;
     Jhat
     CIwidth=max(CI)-min(CI)
@@ -358,8 +372,8 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
 
       m1hat_boots=mean(transx1_boots)
       m2hat_boots=mean(transx2_boots)
-      s1hat_boots=std(transx1_boots)
-      s2hat_boots=std(transx2_boots)
+      s1hat_boots=std(transx1_boots)*(length(transx1_boots)-1)/(length(transx1_boots))
+      s2hat_boots=std(transx2_boots)*(length(transx2_boots)-1)/(length(transx2_boots))
 
       b=s2hat_boots/s1hat_boots
       a=m2hat_boots-m1hat_boots
@@ -437,6 +451,10 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     res <- as.table(res)
     res
 
-    return(list(transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam , transformation.parameter=lam, AUC=auc, AUCCI=CIauc, pvalueAUC=pvalauc, J=Jhat, JCI=CIJ, pvalueJ=pvalJ, Sens=Se, CImarginalSens=margcise, Spec=Sp, CImarginalSpec=margcisp, cutoff=cutoff, CIcutoff=CIcutoff,  areaegg=areaegg, arearect=arearect, mxlam=mean(transx), sxlam=std(transx), mylam=mean(transy), sylam=std(transy), results=res , rocfun=rocfun))
+    if (auc < 0.5) {
+      print("NOTE: AUC < 0.5; the ordering of the two groups may need to be reversed.")
+    }
+
+    return(list(transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam , transformation.parameter=lam, AUC=auc, AUCCI=CIauc, pvalueAUC=pvalauc, J=Jhat, JCI=CIJ, pvalueJ=pvalJ, Sens=Se, CImarginalSens=margcise, Spec=Sp, CImarginalSpec=margcisp, cutoff=cutoff, CIcutoff=CIcutoff,  areaegg=areaegg, arearect=arearect, mxlam=mean(transx), sxlam=std(transx)*(length(transx)-1)/(length(transx)), mylam=mean(transy), sylam=std(transy)*(length(transy)-1)/(length(transy)), results=res , rocfun=rocfun))
   }
 }

@@ -98,7 +98,11 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
 
 
     roc<-function(t,x,y){
-      1-pnorm(qnorm(1-t,mean=mean(transx),sd=std(transx)),mean=mean(transy),sd=std(transy))
+      1-pnorm(qnorm(1-t,
+                    mean=mean(transx),
+                    sd=std(transx)*(length(transx)-1)/(length(transx))),
+              mean=mean(transy),
+              sd=std(transy)*(length(transy)-1)/(length(transy)))
     }
 
     rocuseless<-function(t){
@@ -107,10 +111,14 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
 
     # x11()
     #plot.new()
-    txt <- paste("Box-Cox Based ROC, alpha =", round(alpha,3) )
-    plot(linspace(0,1,1000),roc(linspace(0,1,1000),transx,transy),main=" ",xlab="FPR",ylab="TPR",type="l",col="red")
-    lines(linspace(0,1,10),linspace(0,1,10),type="l", lty=2)
-    title(main=txt)
+
+    if (plots == "on") {
+      txt <- paste("Box-Cox Based ROC, alpha =", round(alpha,3) )
+      plot(linspace(0,1,1000),roc(linspace(0,1,1000),transx,transy),main=" ",xlab="FPR",ylab="TPR",type="l",col="red")
+      lines(linspace(0,1,10),linspace(0,1,10),type="l", lty=2)
+      title(main=txt)
+    }
+
     m1hat=mean(transx)
     m2hat=mean(transy)
     s1hat=std(transx)

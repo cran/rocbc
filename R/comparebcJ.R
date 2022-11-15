@@ -79,9 +79,11 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
       likbox2D(W1a,W1b,W2a,W2b,h)
     }
 
-    init=c(0.8,0.8)
-    lam=fminsearch(logL,init)
-    lam=c(lam$optbase$xopt)
+    # init=c(0.8,0.8)
+    # lam=fminsearch(logL,init)
+    # lam=c(lam$optbase$xopt)
+    lam<- optim(c(1,1),logL,gr=NULL,method="BFGS", control=list(maxit=10000))
+    lam=c(lam$par)
     lam
 
     #init=c(-10,10)
@@ -284,8 +286,8 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
     h11_8=sum(-(2*covb*s2bhat*(W1b^lam1*lam1*log(W1b) - W1b^lam1 + 1)*(covb*lam2 - lam1*s1bhat^2 - W1b^lam1*covb*lam2 + W2b^lam2*lam1*s1bhat^2 + covb*lam1*lam2*m1bhat - lam1*lam2*m2bhat*s1bhat^2))/(lam1^3*lam2*(s1bhat^2*s2bhat^2 - covb^2)^2))
     h11_9=sum(-((W1a^lam1*lam1*log(W1a) - W1a^lam1 + 1)*(cova^2*lam1 - 2*cova*lam2*s2ahat^2 + lam1*s1ahat^2*s2ahat^2 - W2a^lam2*cova^2*lam1 + 2*W1a^lam1*cova*lam2*s2ahat^2 + cova^2*lam1*lam2*m2ahat - W2a^lam2*lam1*s1ahat^2*s2ahat^2 + lam1*lam2*m2ahat*s1ahat^2*s2ahat^2 - 2*cova*lam1*lam2*m1ahat*s2ahat^2))/(lam1^3*lam2*(s1ahat^2*s2ahat^2 - cova^2)^2))
     h11_10=sum(-((W1b^lam1*lam1*log(W1b) - W1b^lam1 + 1)*(covb^2*lam1 - 2*covb*lam2*s2bhat^2 + lam1*s1bhat^2*s2bhat^2 - W2b^lam2*covb^2*lam1 + 2*W1b^lam1*covb*lam2*s2bhat^2 + covb^2*lam1*lam2*m2bhat - W2b^lam2*lam1*s1bhat^2*s2bhat^2 + lam1*lam2*m2bhat*s1bhat^2*s2bhat^2 - 2*covb*lam1*lam2*m1bhat*s2bhat^2))/(lam1^3*lam2*(s1bhat^2*s2bhat^2 - covb^2)^2))
-    h11_11=sum(((2*((W1a^lam1 - 1)/lam1^2 - (W1a^lam1*log(W1a))/lam1)^2)/s1ahat^2 - ((2*m1ahat - (2*(W1a^lam1 - 1))/lam1)*((2*W1a^lam1 - 2)/lam1^3 - (2*W1a^lam1*log(W1a))/lam1^2 + (W1a^lam1*log(W1a)^2)/lam1))/s1ahat^2 + (2*cova*(m2ahat - (W2a^lam2 - 1)/lam2)*((2*W1a^lam1 - 2)/lam1^3 - (2*W1a^lam1*log(W1a))/lam1^2 + (W1a^lam1*log(W1a)^2)/lam1))/(s1ahat^2*s2ahat^2))/((2*cova^2)/(s1ahat^2*s2ahat^2) - 2) + ((2*((W1b^lam1 - 1)/lam1^2 - (W1b^lam1*log(W1b))/lam1)^2)/s1bhat^2 - ((2*m1bhat - (2*(W1b^lam1 - 1))/lam1)*((2*W1b^lam1 - 2)/lam1^3 - (2*W1b^lam1*log(W1b))/lam1^2 + (W1b^lam1*log(W1b)^2)/lam1))/s1bhat^2 + (2*covb*(m2bhat - (W2b^lam2 - 1)/lam2)*((2*W1b^lam1 - 2)/lam1^3 - (2*W1b^lam1*log(W1b))/lam1^2 + (W1b^lam1*log(W1b)^2)/lam1))/(s1bhat^2*s2bhat^2))/((2*covb^2)/(s1bhat^2*s2bhat^2) - 2))
-    h11_12=sum((2*cova*(W1a^lam1*lam1*log(W1a) - W1a^lam1 + 1)*(W2a^lam2*lam2*log(W2a) - W2a^lam2 + 1))/(lam1^2*lam2^2*(- 2*cova^2 + 2*s1ahat^2*s2ahat^2)) + (2*covb*(W1b^lam1*lam1*log(W1b) - W1b^lam1 + 1)*(W2b^lam2*lam2*log(W2b) - W2b^lam2 + 1))/(lam1^2*lam2^2*(- 2*covb^2 + 2*s1bhat^2*s2bhat^2)))
+    h11_11=sum(((2*((W1a^lam1-1)/lam1^2-(W1a^lam1*log(W1a))/lam1)^2)/s1ahat^2-(2*(m1ahat-(W1a^lam1-1)/lam1)*((2*W1a^lam1-2)/lam1^3-(2*W1a^lam1*log(W1a))/lam1^2+(W1a^lam1*log(W1a)^2)/lam1))/s1ahat^2+(2*cova*(m2ahat-(W2a^lam2-1)/lam2)*((2*W1a^lam1-2)/lam1^3-(2*W1a^lam1*log(W1a))/lam1^2+(W1a^lam1*log(W1a)^2)/lam1))/(s1ahat^2*s2ahat^2))/((2*cova^2)/(s1ahat^2*s2ahat^2)-2))+sum(((2*((W1b^lam1-1)/lam1^2-(W1b^lam1*log(W1b))/lam1)^2)/s1bhat^2-(2*(m1bhat-(W1b^lam1-1)/lam1)*((2*W1b^lam1-2)/lam1^3-(2*W1b^lam1*log(W1b))/lam1^2+(W1b^lam1*log(W1b)^2)/lam1))/s1bhat^2+(2*covb*(m2bhat-(W2b^lam2-1)/lam2)*((2*W1b^lam1-2)/lam1^3-(2*W1b^lam1*log(W1b))/lam1^2+(W1b^lam1*log(W1b)^2)/lam1))/(s1bhat^2*s2bhat^2))/((2*covb^2)/(s1bhat^2*s2bhat^2)-2))
+    h11_12=sum((2*cova*(W1a^lam1*lam1*log(W1a)-W1a^lam1+1)*(W2a^lam2*lam2*log(W2a)-W2a^lam2+1))/(lam1^2*lam2^2*(-2*cova^2+2*s1ahat^2*s2ahat^2)))+sum((2*covb*(W1b^lam1*lam1*log(W1b)-W1b^lam1+1)*(W2b^lam2*lam2*log(W2b)-W2b^lam2+1))/(lam1^2*lam2^2*(-2*covb^2+2*s1bhat^2*s2bhat^2)))
 
 
     h12_1=sum(-(cova*(W2a^lam2*lam2*log(W2a) - W2a^lam2 + 1))/(lam2^2*(- cova^2 + s1ahat^2*s2ahat^2)))
@@ -298,9 +300,8 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
     h12_8=sum((2*s1bhat^2*s2bhat*(W2b^lam2*lam2*log(W2b) - W2b^lam2 + 1)*(covb*lam2 - lam1*s1bhat^2 - W1b^lam1*covb*lam2 + W2b^lam2*lam1*s1bhat^2 + covb*lam1*lam2*m1bhat - lam1*lam2*m2bhat*s1bhat^2))/(lam1*lam2^3*(s1bhat^2*s2bhat^2 - covb^2)^2))
     h12_9=sum(-((W2a^lam2*lam2*log(W2a) - W2a^lam2 + 1)*(cova^2*lam2 - 2*cova*lam1*s1ahat^2 + lam2*s1ahat^2*s2ahat^2 - W1a^lam1*cova^2*lam2 + 2*W2a^lam2*cova*lam1*s1ahat^2 + cova^2*lam1*lam2*m1ahat - W1a^lam1*lam2*s1ahat^2*s2ahat^2 + lam1*lam2*m1ahat*s1ahat^2*s2ahat^2 - 2*cova*lam1*lam2*m2ahat*s1ahat^2))/(lam1*lam2^3*(s1ahat^2*s2ahat^2 - cova^2)^2))
     h12_10=sum(-((W2b^lam2*lam2*log(W2b) - W2b^lam2 + 1)*(covb^2*lam2 - 2*covb*lam1*s1bhat^2 + lam2*s1bhat^2*s2bhat^2 - W1b^lam1*covb^2*lam2 + 2*W2b^lam2*covb*lam1*s1bhat^2 + covb^2*lam1*lam2*m1bhat - W1b^lam1*lam2*s1bhat^2*s2bhat^2 + lam1*lam2*m1bhat*s1bhat^2*s2bhat^2 - 2*covb*lam1*lam2*m2bhat*s1bhat^2))/(lam1*lam2^3*(s1bhat^2*s2bhat^2 - covb^2)^2))
-    h12_11=sum((2*cova*(W1a^lam1*lam1*log(W1a) - W1a^lam1 + 1)*(W2a^lam2*lam2*log(W2a) - W2a^lam2 + 1))/(lam1^2*lam2^2*(- 2*cova^2 + 2*s1ahat^2*s2ahat^2)) + (2*covb*(W1b^lam1*lam1*log(W1b) - W1b^lam1 + 1)*(W2b^lam2*lam2*log(W2b) - W2b^lam2 + 1))/(lam1^2*lam2^2*(- 2*covb^2 + 2*s1bhat^2*s2bhat^2)))
-    h12_12=sum(((2*((W2a^lam2 - 1)/lam2^2 - (W2a^lam2*log(W2a))/lam2)^2)/s2ahat^2 - ((2*m2ahat - (2*(W2a^lam2 - 1))/lam2)*((2*W2a^lam2 - 2)/lam2^3 - (2*W2a^lam2*log(W2a))/lam2^2 + (W2a^lam2*log(W2a)^2)/lam2))/s2ahat^2 + (2*cova*(m1ahat - (W1a^lam1 - 1)/lam1)*((2*W2a^lam2 - 2)/lam2^3 - (2*W2a^lam2*log(W2a))/lam2^2 + (W2a^lam2*log(W2a)^2)/lam2))/(s1ahat^2*s2ahat^2))/((2*cova^2)/(s1ahat^2*s2ahat^2) - 2) + ((2*((W2b^lam2 - 1)/lam2^2 - (W2b^lam2*log(W2b))/lam2)^2)/s2bhat^2 - ((2*m2bhat - (2*(W2b^lam2 - 1))/lam2)*((2*W2b^lam2 - 2)/lam2^3 - (2*W2b^lam2*log(W2b))/lam2^2 + (W2b^lam2*log(W2b)^2)/lam2))/s2bhat^2 + (2*covb*(m1bhat - (W1b^lam1 - 1)/lam1)*((2*W2b^lam2 - 2)/lam2^3 - (2*W2b^lam2*log(W2b))/lam2^2 + (W2b^lam2*log(W2b)^2)/lam2))/(s1bhat^2*s2bhat^2))/((2*covb^2)/(s1bhat^2*s2bhat^2) - 2))
-
+    h12_11=sum((2*cova*(W1a^lam1*lam1*log(W1a)-W1a^lam1+1)*(W2a^lam2*lam2*log(W2a)-W2a^lam2+1))/(lam1^2*lam2^2*(-2*cova^2+2*s1ahat^2*s2ahat^2)))+sum((2*covb*(W1b^lam1*lam1*log(W1b)-W1b^lam1+1)*(W2b^lam2*lam2*log(W2b)-W2b^lam2+1))/(lam1^2*lam2^2*(-2*covb^2+2*s1bhat^2*s2bhat^2)))
+    h12_12=sum(((2*((W2a^lam2-1)/lam2^2-(W2a^lam2*log(W2a))/lam2)^2)/s2ahat^2-(2*(m2ahat-(W2a^lam2-1)/lam2)*((2*W2a^lam2-2)/lam2^3-(2*W2a^lam2*log(W2a))/lam2^2+(W2a^lam2*log(W2a)^2)/lam2))/s2ahat^2+(2*cova*(m1ahat-(W1a^lam1-1)/lam1)*((2*W2a^lam2-2)/lam2^3-(2*W2a^lam2*log(W2a))/lam2^2+(W2a^lam2*log(W2a)^2)/lam2))/(s1ahat^2*s2ahat^2))/((2*cova^2)/(s1ahat^2*s2ahat^2)-2))+sum(((2*((W2b^lam2-1)/lam2^2-(W2b^lam2*log(W2b))/lam2)^2)/s2bhat^2-(2*(m2bhat-(W2b^lam2-1)/lam2)*((2*W2b^lam2-2)/lam2^3-(2*W2b^lam2*log(W2b))/lam2^2+(W2b^lam2*log(W2b)^2)/lam2))/s2bhat^2+(2*covb*(m1bhat-(W1b^lam1-1)/lam1)*((2*W2b^lam2-2)/lam2^3-(2*W2b^lam2*log(W2b))/lam2^2+(W2b^lam2*log(W2b)^2)/lam2))/(s1bhat^2*s2bhat^2))/((2*covb^2)/(s1bhat^2*s2bhat^2)-2))
 
 
 
@@ -450,11 +451,25 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
 
     #====TWO ROC FUNCTIONS: ONE IS THE BOXCOX AND THE OTHER THE REFERENCE LINE================
     roc1<-function(t){
-      1-pnorm(qnorm(1-t,mean=mean(W1alam),sd=std(W1alam)),mean=mean(W1blam),sd=std(W1blam))
+      na = length(W1alam)
+      nb = length(W1blam)
+
+      1-pnorm(qnorm(1-t,
+                    mean=mean(W1alam),
+                    sd=std(W1alam)*((na-1)/na)),
+              mean=mean(W1blam),
+              sd=std(W1blam)*((nb-1)/nb))
     }
 
     roc2<-function(t){
-      1-pnorm(qnorm(1-t,mean=mean(W2alam),sd=std(W2alam)),mean=mean(W2blam),sd=std(W2blam))
+      na = length(W2alam)
+      nb = length(W2blam)
+
+      1-pnorm(qnorm(1-t,
+                    mean=mean(W2alam),
+                    sd=std(W2alam)*((na-1)/na)),
+              mean=mean(W2blam),
+              sd=std(W2blam)*((nb-1)/nb))
     }
 
     rocuseless<-function(t){
@@ -519,7 +534,7 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
 
     #return(list(AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_difference= pval2t, CI_difference= pnorm(CIdiff), rocbc1=roc1, rocbc2=roc2))
     #return(list(resultstable=res,J1=J1original,J2=J2original, pvalue_difference= pval2t, CI_difference= CIoriginal, rocbc1=roc1, rocbc2=roc2))
-    return(list(resultstable=res,J1=J1original,J2=J2original, pvalue_transJ_difference= pval2t, CI_transJ_difference= CIZstar, pvalue_difference= pval2tJ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,J1=J1original,J2=J2original, pvalue_probit_difference= pval2t, CI_probit_difference= CIZstar, pvalue_difference= pval2tJ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
 
   }
 

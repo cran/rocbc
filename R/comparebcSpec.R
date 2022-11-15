@@ -50,11 +50,25 @@ comparebcSpec <-function (marker1, marker2, D, atSens, alpha, plots){
     W2blam=out$transy2
     #====TWO ROC FUNCTIONS: ONE IS THE BOXCOX AND THE OTHER THE REFERENCE LINE================
     roct1<-function(t){
-      1-pnorm(qnorm(1-t,mean=mean(W1blam),sd=std(W1blam)),mean=mean(W1alam),sd=std(W1alam))
+      na = length(W1alam)
+      nb = length(W1blam)
+
+      1-pnorm(qnorm(1-t,
+                    mean=mean(W1blam),
+                    sd=std(W1blam)*((nb-1)/nb)),
+              mean=mean(W1alam),
+              sd=std(W1alam)*((na-1)/na))
     }
 
     roct2<-function(t){
-      1-pnorm(qnorm(1-t,mean=mean(W2blam),sd=std(W2blam)),mean=mean(W2alam),sd=std(W2alam))
+      na = length(W2alam)
+      nb = length(W2blam)
+
+      1-pnorm(qnorm(1-t,
+                    mean=mean(W2blam),
+                    sd=std(W2blam)*((nb-1)/nb)),
+              mean=mean(W2alam),
+              sd=std(W2alam)*((na-1)/na))
     }
 
     rocuseless<-function(t){

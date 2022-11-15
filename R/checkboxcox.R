@@ -55,8 +55,10 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
         -likbox(x,y,h)
       }
       #lam=fminsearch(logL,init)
-      lam <- optimize(logL, c(-100, 100), tol = 0.0001)
-      lam=c(lam$minimum) #c(lam$optbase$xopt)
+      # lam <- optimize(logL, c(-100, 100), tol = 0.0001)
+      # lam=c(lam$minimum) #c(lam$optbase$xopt)
+      lam<- optim(1,logL,gr=NULL,method="BFGS", control=list(maxit=10000))
+      lam=c(lam$par)
       transx=((x^lam)-1)/lam
       transy=((y^lam)-1)/lam
 
@@ -132,7 +134,11 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
 
     #====TWO ROC FUNCTIONS: ONE IS THE BOXCOX AND THE OTHER THE REFERENCE LINE================
     roc<-function(t){
-      1-pnorm(qnorm(1-t,mean=mean(transx),sd=std(transx)),mean=mean(transy),sd=std(transy))
+      1-pnorm(qnorm(1-t,
+                    mean=mean(transx),
+                    sd=std(transx)*(length(transx)-1)/(length(transx))),
+              mean=mean(transy),
+              sd=std(transy)*(length(transy)-1)/(length(transy)))
     }
 
     rocuseless<-function(t){
