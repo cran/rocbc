@@ -8,8 +8,8 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
   } else if (sum(is.na(marker1)) > 0 | sum(is.na(marker2)) > 0 | sum(is.na(D)) > 0 | sum(is.na(atSpec)) > 0) {
     stop("ERROR: Please remove all missing data before running this function.")
-  } else if (!is.numeric(atSpec)) {
-    stop("ERROR: 'atSpec' must be a numeric vector.")
+  } else if ((!is.numeric(atSpec)) | (length(atSpec) != 1)) {
+    stop("ERROR: 'atSpec' must be a single numeric value.")
   } else {
 
     erf <- function (x) 2 * pnorm(x * sqrt(2)) - 1
@@ -410,10 +410,16 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
     SE1=pnorm(ROC1MC)
     SE2=pnorm(ROC2MC)
 
-    res <- matrix(c(SE1,SE2, pval2t, CIZstar[1],CIZstar[2]),ncol=5,byrow=TRUE)
-    colnames(res) <- c("Sens 1:","    Sens 2:","    p-value (probit):","   CI probit (LL):","    CI probit (UL):")
+    res <- data.frame(Sens1 = formattable(SE1, digits = 4, format = "f"),
+                      Sens2 = formattable(SE2, digits = 4, format = "f"),
+                      p_value_probit = formattable(pval2t, digits = 4, format = "f"),
+                      p_value = formattable(pval2tZ, digits = 4, format = "f"),
+                      ci_ll = formattable(CIoriginal[1], digits = 4, format = "f"),
+                      ci_ul = formattable(CIoriginal[2], digits = 4, format = "f"))
+
     rownames(res) <- c("Estimates:")
-    res <- as.table(res)
+    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
@@ -422,22 +428,28 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
       na = length(W1alam)
       nb = length(W1blam)
 
+      s1alam=sqrt( var(W1alam)*(na-1)/na )
+      s1blam=sqrt( var(W1blam)*(nb-1)/nb )
+
       1-pnorm(qnorm(1-t,
                     mean=mean(W1alam),
-                    sd=std(W1alam)*((na-1)/na)),
+                    sd=s1alam),
               mean=mean(W1blam),
-              sd=std(W1blam)*((nb-1)/nb))
+              sd=s1blam)
     }
 
     roc2<-function(t){
       na = length(W2alam)
       nb = length(W2blam)
 
+      s2alam=sqrt( var(W2alam)*(na-1)/na )
+      s2blam=sqrt( var(W2blam)*(nb-1)/nb )
+
       1-pnorm(qnorm(1-t,
                     mean=mean(W2alam),
-                    sd=std(W2alam)*((na-1)/na)),
+                    sd=s2alam),
               mean=mean(W2blam),
-              sd=std(W2blam)*((nb-1)/nb))
+              sd=s2blam)
     }
 
     rocuseless<-function(t){
@@ -457,9 +469,9 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
       points(1-atSpec,SE2, col = "black")
 
 
-      legend("bottomright", legend=c(paste("ROC for Marker 1 with Sens =", round(SE1,4), "at Spec =", atSpec),
-                                     paste("ROC for Marker 2 with Sens =", round(SE2,4), "at Spec =", atSpec),
-                                     paste("P-value for the Sens difference:",round(pval2t,4))),
+      legend("bottomright", legend=c(paste("ROC for Marker 1 with Sens =", formattable(SE1, digits = 4, format = "f"), "at Spec =", formattable(atSpec, digits = 4, format = "f")),
+                                     paste("ROC for Marker 2 with Sens =", formattable(SE2, digits = 4, format = "f"), "at Spec =", formattable(atSpec, digits = 4, format = "f")),
+                                     paste("P-value for the Sens difference:", formattable(pval2t, digits = 4, format = "f"))),
 
              col=c("red", "black", "white"), lty=c(1, 1, NA), pch = c(NA, NA, NA), cex=0.8)
 
@@ -468,7 +480,7 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
 
 
 
-    return(list(resultstable=res,Sens1=SE1,Sens2=SE2, pvalue_probit_difference= pval2t, CI_probit_difference= CIZstar, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,Sens1=SE1,Sens2=SE2, pvalue_probit_difference= pval2t, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
 
 
 

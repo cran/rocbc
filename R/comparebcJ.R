@@ -454,22 +454,28 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
       na = length(W1alam)
       nb = length(W1blam)
 
+      s1alam=sqrt( var(W1alam)*(na-1)/na )
+      s1blam=sqrt( var(W1blam)*(nb-1)/nb )
+
       1-pnorm(qnorm(1-t,
                     mean=mean(W1alam),
-                    sd=std(W1alam)*((na-1)/na)),
+                    sd=s1alam),
               mean=mean(W1blam),
-              sd=std(W1blam)*((nb-1)/nb))
+              sd=s1blam)
     }
 
     roc2<-function(t){
       na = length(W2alam)
       nb = length(W2blam)
 
+      s2alam=sqrt( var(W2alam)*(na-1)/na )
+      s2blam=sqrt( var(W2blam)*(nb-1)/nb )
+
       1-pnorm(qnorm(1-t,
                     mean=mean(W2alam),
-                    sd=std(W2alam)*((na-1)/na)),
+                    sd=s2alam),
               mean=mean(W2blam),
-              sd=std(W2blam)*((nb-1)/nb))
+              sd=s2blam)
     }
 
     rocuseless<-function(t){
@@ -477,11 +483,11 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
     }
 
 
-    Sens1=1-pnorm(c1, mean=mean(W1blam), sd=sd(W1blam))
-    Spec1=  pnorm(c1, mean=mean(W1alam), sd=sd(W1alam))
+    Sens1=1-pnorm(c1, mean=mean(W1blam), sd=sqrt(var(W1blam)*(nb-1)/nb))
+    Spec1=  pnorm(c1, mean=mean(W1alam), sd=sqrt(var(W1alam)*(na-1)/na))
 
-    Sens2=1-pnorm(c2, mean=mean(W2blam), sd=sd(W2blam))
-    Spec2=  pnorm(c2, mean=mean(W2alam), sd=sd(W2alam))
+    Sens2=1-pnorm(c2, mean=mean(W2blam), sd=sqrt(var(W2blam)*(nb-1)/nb))
+    Spec2=  pnorm(c2, mean=mean(W2alam), sd=sqrt(var(W2alam)*(na-1)/na))
 
     #================IF PLOTS ARE REQUESTED PLOT THE ROCS==
     if (plots=="on") {
@@ -498,9 +504,9 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
       lines(c(1-Spec1,1-Spec1),c(rocuseless(1-Spec1),Sens1),col="blue")
       lines(c(1-Spec2,1-Spec2),c(rocuseless(1-Spec2),Sens2),col="green")
 
-      legend("bottomright", legend=c(paste("ROC for Marker 1 with J =", round(J1original,4), " "),
-                                     paste("ROC for Marker 2 with J =", round(J2original,4), " "),
-                                     paste("P-value for the difference:",round(pval2t,4), " ")),
+      legend("bottomright", legend=c(paste("ROC for Marker 1 with J =", formattable(J1original, digits = 4, format = "f"), " "),
+                                     paste("ROC for Marker 2 with J =", formattable(J2original, digits = 4, format = "f"), " "),
+                                     paste("P-value for the difference:", formattable(pval2t, digits = 4, format = "f"), " ")),
 
              col=c("red", "black", "white"), lty=c(1, 1, NA), pch = c(NA, NA, NA), cex=0.8)
 
@@ -523,18 +529,22 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
 
     #======================================================
 
+    res <- data.frame(J1 = formattable(J1original, digits = 4, format = "f"),
+                      J2 = formattable(J2original, digits = 4, format = "f"),
+                      p_value_probit = formattable(pval2t, digits = 4, format = "f"),
+                      p_value = formattable(pval2tJ, digits = 4, format = "f"),
+                      ci_ll = formattable(CIoriginal[1], digits = 4, format = "f"),
+                      ci_ul = formattable(CIoriginal[2], digits = 4, format = "f"))
 
-
-    res <- matrix(c(J1original,J2original, pval2t,CIZstar[1],CIZstar[2]),ncol=5,byrow=TRUE)
-    colnames(res) <- c("J1:","    J2:","    p-value (trans):","   CI trans (LL):","    CI trans (UL):")
     rownames(res) <- c("Estimates:")
-    res <- as.table(res)
+    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
     #return(list(AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_difference= pval2t, CI_difference= pnorm(CIdiff), rocbc1=roc1, rocbc2=roc2))
     #return(list(resultstable=res,J1=J1original,J2=J2original, pvalue_difference= pval2t, CI_difference= CIoriginal, rocbc1=roc1, rocbc2=roc2))
-    return(list(resultstable=res,J1=J1original,J2=J2original, pvalue_probit_difference= pval2t, CI_probit_difference= CIZstar, pvalue_difference= pval2tJ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,J1=J1original,J2=J2original, pvalue_probit_difference= pval2t, pvalue_difference= pval2tJ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
 
   }
 

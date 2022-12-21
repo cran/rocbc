@@ -9,6 +9,9 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
     stop("ERROR: Please remove all missing data before running this function.")
   } else if (alpha <= 0 | alpha >= 1) {
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
+  } else if (!((sum(is.na(givenSP)) == 0 & sum(is.na(givenSE) > 0)) |
+               (sum(is.na(givenSE)) == 0 & sum(is.na(givenSP) > 0)))) {
+    stop("ERROR: Exactly one of 'givenSP' and 'givenSE' must be set to NA.")
   } else {
 
     #graphics.off()
@@ -97,12 +100,19 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
 
 
 
-    roc<-function(t,x,y){
+    roc<-function(t,trans_x,trans_y){
+
+      na = length(trans_x)
+      nb = length(trans_y)
+
+      stransx=sqrt(var(trans_x)*(na-1)/na)
+      stransy=sqrt(var(trans_y)*(nb-1)/nb)
+
       1-pnorm(qnorm(1-t,
-                    mean=mean(transx),
-                    sd=std(transx)*(length(transx)-1)/(length(transx))),
-              mean=mean(transy),
-              sd=std(transy)*(length(transy)-1)/(length(transy)))
+                    mean=mean(trans_x),
+                    sd=stransx),
+              mean=mean(trans_y),
+              sd=stransy)
     }
 
     rocuseless<-function(t){
@@ -121,8 +131,8 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
 
     m1hat=mean(transx)
     m2hat=mean(transy)
-    s1hat=std(transx)
-    s2hat=std(transy)
+    # s1hat=std(transx)
+    # s2hat=std(transy)
     n1=length(x)
     n2=length(y)
 
@@ -131,6 +141,9 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
     I=zeros(5,5);
     sh=sqrt(1/(length(transx))*sum((transx-mean(transx))^2))
     sd=sqrt(1/(length(transy))*sum((transy-mean(transy))^2))
+
+    s1hat = sh
+    s2hat = sd
 
     mh=m1hat;
     md=m2hat;

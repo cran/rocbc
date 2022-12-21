@@ -433,22 +433,28 @@ comparebcAUC <-function (marker1, marker2, D, alpha, plots){
       na = length(W1alam)
       nb = length(W1blam)
 
+      s1alam=sqrt( var(W1alam)*(na-1)/na )
+      s1blam=sqrt( var(W1blam)*(nb-1)/nb )
+
       1-pnorm(qnorm(1-t,
                     mean=mean(W1alam),
-                    sd=std(W1alam)*((na-1)/na)),
+                    sd=s1alam),
               mean=mean(W1blam),
-              sd=std(W1blam)*((nb-1)/nb))
+              sd=s1blam)
     }
 
     roc2<-function(t){
       na = length(W2alam)
       nb = length(W2blam)
 
+      s2alam=sqrt( var(W2alam)*(na-1)/na )
+      s2blam=sqrt( var(W2blam)*(nb-1)/nb )
+
       1-pnorm(qnorm(1-t,
                     mean=mean(W2alam),
-                    sd=std(W2alam)*((na-1)/na)),
+                    sd=s2alam),
               mean=mean(W2blam),
-              sd=std(W2blam)*((nb-1)/nb))
+              sd=s2blam)
     }
 
     rocuseless<-function(t){
@@ -464,9 +470,9 @@ comparebcAUC <-function (marker1, marker2, D, alpha, plots){
 
 
 
-      legend("bottomright", legend=c(paste("ROC for Marker 1 with AUC =", round(AUC1original,4)),
-                                     paste("ROC for Marker 2 with AUC =", round(AUC2original,4)),
-                                     paste("P-value for the probit AUC difference:",round(pval2t,4), " ")),
+      legend("bottomright", legend=c(paste("ROC for Marker 1 with AUC =", formattable(AUC1original, digits = 4, format = "f")),
+                                     paste("ROC for Marker 2 with AUC =", formattable(AUC2original, digits = 4, format = "f")),
+                                     paste("P-value for the probit AUC difference:", formattable(pval2t, digits = 4, format = "f"), " ")),
 
              col=c("red", "black", "white"), lty=c(1, 1, NA), pch = c(NA, NA, NA), cex=0.8)
 
@@ -477,15 +483,21 @@ comparebcAUC <-function (marker1, marker2, D, alpha, plots){
     ###############################################################################
     #================OUTPUT ARGUMENTS======================
 
-    res <- matrix(c(round(AUC1original,4),round(AUC2original,7), round(pval2t,7) ,CIdiff[1],CIdiff[2]),ncol=5,byrow=TRUE)
-    colnames(res) <- c("AUC 1:","    AUC 2:","    p-value (probit):","   CI probit (LL):","    CI probit (UL):")
+    res <- data.frame(AUC1 = formattable(AUC1original, digits = 4, format = "f"),
+                      AUC2 = formattable(AUC2original, digits = 4, format = "f"),
+                      p_value_probit = formattable(pval2t, digits = 4, format = "f"),
+                      p_value = formattable(pval2tdAUC, digits = 4, format = "f"),
+                      ci_ll = formattable(CIdiffdAUC[1], digits = 4, format = "f"),
+                      ci_ul = formattable(CIdiffdAUC[2], digits = 4, format = "f"))
+
     rownames(res) <- c("Estimates:")
-    res <- as.table(res)
+    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
     #return(list(AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_difference= pval2t, CI_difference= pnorm(CIdiff), rocbc1=roc1, rocbc2=roc2))
-    return(list(resultstable=res,AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_probit_difference= pval2t, CI_probit_difference= CIdiff, pvalue_difference= pval2tdAUC, CI_difference= CIdiffdAUC, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_probit_difference= pval2t, pvalue_difference= pval2tdAUC, CI_difference= CIdiffdAUC, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
 
   }
 }

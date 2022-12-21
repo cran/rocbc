@@ -28,6 +28,7 @@ library(clinfun)
 library(splancs)
 library(mvtnorm)
 library(matlab)
+library(formattable)
 ```
 
 ```{r, echo=FALSE, eval=TRUE}
@@ -131,12 +132,19 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     #qqnorm(y)
     #title(main="                                         for Y")
 
-    roc<-function(t,x,y){
+    roc<-function(t,trans_x,trans_y){
+
+      na = length(trans_x)
+      nb = length(trans_y)
+
+      stransx=sqrt(var(trans_x)*(na-1)/na)
+      stransy=sqrt(var(trans_y)*(nb-1)/nb)
+
       1-pnorm(qnorm(1-t,
-                    mean=mean(transx),
-                    sd=std(transx)*(length(transx)-1)/(length(transx))),
-              mean=mean(transy),
-              sd=std(transy)*(length(transy)-1)/(length(transy)))
+                    mean=mean(trans_x),
+                    sd=stransx),
+              mean=mean(trans_y),
+              sd=stransy)
     }
 
     rocuseless<-function(t){
@@ -144,17 +152,17 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     }
 
     if (plots=="on"){
-      txt <- paste("Box-Cox Based ROC, alpha =", round(alpha,3) )
+      txt <- paste("Box-Cox Based ROC, alpha =", formattable(alpha, digits = 3))
       plot(linspace(0,1,1000),roc(linspace(0,1,1000),transx,transy),main=" ",xlab="FPR = 1 - Specificity",ylab="TPR = Sensitivity",type="l",col="red")
       lines(linspace(0,1,10),linspace(0,1,10),type="l", lty=2)
       title(main=txt)
 
     }
-    rocfun=function(t){1-pnorm(qnorm(1-t,mean=mean(transx),sd=std(transx)*(length(transx)-1)/(length(transx))),mean=mean(transy),sd=std(transy)*(length(transy)-1)/(length(transy)))}
+    rocfun=function(t){1-pnorm(qnorm(1-t,mean=mean(transx),sd=sqrt(var(transx)*(length(transx)-1)/length(transx))),mean=mean(transy),sd=sqrt(var(transy)*(length(transy)-1)/length(transy)))}
     m1hat=mean(transx)
     m2hat=mean(transy)
-    s1hat=std(transx)*(length(transx)-1)/(length(transx))
-    s2hat=std(transy)*(length(transx)-1)/(length(transx))
+    s1hat=sqrt(var(transx)*(length(transx)-1)/length(transx))
+    s2hat=sqrt(var(transy)*(length(transy)-1)/length(transy))
     n1=length(x)
     n2=length(y)
 
@@ -406,8 +414,8 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
 
       m1hat_boots=mean(transx1_boots)
       m2hat_boots=mean(transx2_boots)
-      s1hat_boots=std(transx1_boots)*(length(transx1_boots)-1)/(length(transx1_boots))
-      s2hat_boots=std(transx2_boots)*(length(transx2_boots)-1)/(length(transx2_boots))
+      s1hat_boots=sqrt(var(transx1_boots)*(length(transx1_boots)-1)/length(transx1_boots))
+      s2hat_boots=sqrt(var(transx2_boots)*(length(transx2_boots)-1)/length(transx2_boots))
 
       b=s2hat_boots/s1hat_boots
       a=m2hat_boots-m1hat_boots
@@ -439,31 +447,31 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
 
     if (plots=="on"){
       legend("bottomright", legend=c(paste("ROC estimate with AUC = ",
-                                           round(auc,4),
+                                           formattable(auc, digits = 4, format = "f"),
                                            ", CI: (",
-                                           round(CIauc[1],4),
+                                           formattable(CIauc[1], digits = 4, format = "f"),
                                            ", ",
-                                           round(CIauc[2],4) ,")", sep = ""),
-                                     paste("Maximized Youden index = ",round(Jhat,4),
+                                           formattable(CIauc[2], digits = 4, format = "f") ,")", sep = ""),
+                                     paste("Maximized Youden index = ", formattable(Jhat, digits = 4, format = "f"),
                                            ", CI: (",
-                                           round((CIJ[1]),4),
+                                           formattable((CIJ[1]), digits = 4, format = "f"),
                                            ", ",
-                                           round((CIJ[2]),4), ")", sep = ""),
+                                           formattable((CIJ[2]), digits = 4, format = "f"), ")", sep = ""),
                                      paste("Optimal pair of (FPR,TPR): (",
-                                           round(1-Sp,4),
+                                           formattable(1-Sp, digits = 4, format = "f"),
                                            ", ",
-                                           round(Se,4), ")", sep = ""),
-                                     paste("Area of the rect. conf. region =",round(arearect,4)),
-                                     paste("Area of the egg conf. region =",round(areaegg,4)),
-                                     paste("Youden based cutoff: ",round(cutoff,4),", CI: (",
-                                           round(CIcutoff[1],4),
+                                           formattable(Se, digits = 4, format = "f"), ")", sep = ""),
+                                     paste("Area of the rect. conf. region =", formattable(arearect, digits = 4, format = "f")),
+                                     paste("Area of the egg conf. region =", formattable(areaegg, digits = 4, format = "f")),
+                                     paste("Youden based cutoff: ", formattable(cutoff, digits = 4, format = "f"),", CI: (",
+                                           formattable(CIcutoff[1], digits = 4, format = "f"),
                                            ", ",
-                                           round(CIcutoff[2],4), ")", sep = ""),
+                                           formattable(CIcutoff[2], digits = 4, format = "f"), ")", sep = ""),
                                      paste("Sp Marginal CI: (",
-                                           c(round(margcisp[1],4)), ", ", round(margcisp[2],4),
+                                           c(formattable(margcisp[1], digits = 4, format = "f")), ", ", formattable(margcisp[2], digits = 4, format = "f"),
                                            ")", sep = ""),
                                      paste("Se Marginal CI: (",
-                                           c(round(margcise[1],4)), ", ", round(margcise[2],4), ")",
+                                           c(formattable(margcise[1], digits = 4, format = "f")), ", ", formattable(margcise[2], digits = 4, format = "f"), ")",
                                            sep = "")),
              col=c("red", "blue", "red", "black", "green", "white", "white", "white"),
              lty=c(1,1,1,1,1,1,NA, NA),
@@ -482,16 +490,18 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
                     Se,margcise[1],margcise[2]),ncol=3,byrow=TRUE)
     colnames(res) <- c("Estimate","Confidence","Interval")
     rownames(res) <- c("AUC","Jhat","cutoff","Sp","Se")
-    res <- as.table(res)
+    res <- data.frame(res)
+    res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
-    
+
     if (auc < 0.5) {
       print("NOTE: AUC < 0.5; the ordering of the two groups may need to be reversed.")
     }
 
-    return(list(transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam , transformation.parameter=lam, AUC=auc, AUCCI=CIauc, pvalueAUC=pvalauc, J=Jhat, JCI=CIJ, pvalueJ=pvalJ, Sens=Se, CImarginalSens=margcise, Spec=Sp, CImarginalSpec=margcisp, cutoff=cutoff, CIcutoff=CIcutoff,  areaegg=areaegg, arearect=arearect, mxlam=mean(transx), sxlam=std(transx)*(length(transx)-1)/(length(transx)), mylam=mean(transy), sylam=std(transy)*(length(transy)-1)/(length(transy)), results=res , rocfun=rocfun))
+    return(list(transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam , transformation.parameter=lam, AUC=auc, AUCCI=CIauc, pvalueAUC=pvalauc, J=Jhat, JCI=CIJ, pvalueJ=pvalJ, Sens=Se, CImarginalSens=margcise, Spec=Sp, CImarginalSpec=margcisp, cutoff=cutoff, CIcutoff=CIcutoff,  areaegg=areaegg, arearect=arearect, mxlam=mean(transx), sxlam=sqrt(var(transx)*(length(transx)-1)/length(transx)), mylam=mean(transy), sylam=sqrt(var(transy)*(length(transy)-1)/length(transy)), results=res , rocfun=rocfun))
   }
 }
+
 
 ```
 
@@ -596,12 +606,19 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
 
 
 
-    roc<-function(t,x,y){
+    roc<-function(t,trans_x,trans_y){
+
+      na = length(trans_x)
+      nb = length(trans_y)
+
+      stransx=sqrt(var(trans_x)*(na-1)/na)
+      stransy=sqrt(var(trans_y)*(nb-1)/nb)
+
       1-pnorm(qnorm(1-t,
-                    mean=mean(transx),
-                    sd=std(transx)*(length(transx)-1)/(length(transx))),
-              mean=mean(transy),
-              sd=std(transy)*(length(transy)-1)/(length(transy)))
+                    mean=mean(trans_x),
+                    sd=stransx),
+              mean=mean(trans_y),
+              sd=stransy)
     }
 
     rocuseless<-function(t){
@@ -610,18 +627,18 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
 
     # x11()
     #plot.new()
-    
+
     if (plots == "on") {
       txt <- paste("Box-Cox Based ROC, alpha =", round(alpha,3) )
       plot(linspace(0,1,1000),roc(linspace(0,1,1000),transx,transy),main=" ",xlab="FPR",ylab="TPR",type="l",col="red")
       lines(linspace(0,1,10),linspace(0,1,10),type="l", lty=2)
       title(main=txt)
     }
-    
+
     m1hat=mean(transx)
     m2hat=mean(transy)
-    s1hat=std(transx)
-    s2hat=std(transy)
+    # s1hat=std(transx)
+    # s2hat=std(transy)
     n1=length(x)
     n2=length(y)
 
@@ -630,6 +647,9 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
     I=zeros(5,5);
     sh=sqrt(1/(length(transx))*sum((transx-mean(transx))^2))
     sd=sqrt(1/(length(transy))*sum((transy-mean(transy))^2))
+
+    s1hat = sh
+    s2hat = sd
 
     mh=m1hat;
     md=m2hat;
@@ -848,11 +868,10 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
 
 }
 
+
 ```
 
 ```{r, echo=FALSE, eval=TRUE}
-#====THIS IS THE MAIN FUNCTION CHECKBOXCOX ====================================================
-#INPUT ARGUMENTS: TWO GROUPS (x,y) and plots="on" or "off"====================================
 
 checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
 
@@ -874,7 +893,8 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
 
     x = xor
     y = yor
-    scores = c(x, y)
+    scores = marker
+    # scores = c(x, y)
 
     #====THIS IS THE LIKELIHOOD OF THE BOXCOX TRANSFORMATION=======================================
     #INPUT ARGUMENTS: TWO GROUPS (x,y) and plots="on" or "off"====================================
@@ -990,11 +1010,18 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
 
     #====TWO ROC FUNCTIONS: ONE IS THE BOXCOX AND THE OTHER THE REFERENCE LINE================
     roc<-function(t){
+
+      na = length(transx)
+      nb = length(transy)
+
+      stransx=sqrt( var(transx)*(na-1)/na )
+      stransy=sqrt( var(transy)*(nb-1)/nb )
+
       1-pnorm(qnorm(1-t,
                     mean=mean(transx),
-                    sd=std(transx)*(length(transx)-1)/(length(transx))),
+                    sd=stransx),
               mean=mean(transy),
-              sd=std(transy)*(length(transy)-1)/(length(transy)))
+              sd=stransy)
     }
 
     rocuseless<-function(t){
@@ -1019,10 +1046,11 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
     }
 
     #================OUTPUT ARGUMENTS======================
-    return(list(transformation.parameter=lam,transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam, pval_x1=pvalues[1], pval_x2=pvalues[2],pval_x1trans=pvalues[3], pval_x2trans=pvalues[4], rocbc=roc ))
+    return(list(transformation.parameter=lam,transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam, pval_x=pvalues[1], pval_y=pvalues[2],pval_transx=pvalues[3], pval_transy=pvalues[4], rocbc=roc ))
 
   }
 }
+
 
 ```
 
@@ -1463,22 +1491,28 @@ comparebcAUC <-function (marker1, marker2, D, alpha, plots){
       na = length(W1alam)
       nb = length(W1blam)
 
+      s1alam=sqrt( var(W1alam)*(na-1)/na )
+      s1blam=sqrt( var(W1blam)*(nb-1)/nb )
+
       1-pnorm(qnorm(1-t,
                     mean=mean(W1alam),
-                    sd=std(W1alam)*((na-1)/na)),
+                    sd=s1alam),
               mean=mean(W1blam),
-              sd=std(W1blam)*((nb-1)/nb))
+              sd=s1blam)
     }
 
     roc2<-function(t){
       na = length(W2alam)
       nb = length(W2blam)
 
+      s2alam=sqrt( var(W2alam)*(na-1)/na )
+      s2blam=sqrt( var(W2blam)*(nb-1)/nb )
+
       1-pnorm(qnorm(1-t,
                     mean=mean(W2alam),
-                    sd=std(W2alam)*((na-1)/na)),
+                    sd=s2alam),
               mean=mean(W2blam),
-              sd=std(W2blam)*((nb-1)/nb))
+              sd=s2blam)
     }
 
     rocuseless<-function(t){
@@ -1494,9 +1528,9 @@ comparebcAUC <-function (marker1, marker2, D, alpha, plots){
 
 
 
-      legend("bottomright", legend=c(paste("ROC for Marker 1 with AUC =", round(AUC1original,4)),
-                                     paste("ROC for Marker 2 with AUC =", round(AUC2original,4)),
-                                     paste("P-value for the probit AUC difference:",round(pval2t,4), " ")),
+      legend("bottomright", legend=c(paste("ROC for Marker 1 with AUC =", formattable(AUC1original, digits = 4, format = "f")),
+                                     paste("ROC for Marker 2 with AUC =", formattable(AUC2original, digits = 4, format = "f")),
+                                     paste("P-value for the probit AUC difference:", formattable(pval2t, digits = 4, format = "f"), " ")),
 
              col=c("red", "black", "white"), lty=c(1, 1, NA), pch = c(NA, NA, NA), cex=0.8)
 
@@ -1507,18 +1541,25 @@ comparebcAUC <-function (marker1, marker2, D, alpha, plots){
     ###############################################################################
     #================OUTPUT ARGUMENTS======================
 
-    res <- matrix(c(round(AUC1original,4),round(AUC2original,7), round(pval2t,7) ,CIdiff[1],CIdiff[2]),ncol=5,byrow=TRUE)
-    colnames(res) <- c("AUC 1:","    AUC 2:","    p-value (probit):","   CI probit (LL):","    CI probit (UL):")
+    res <- data.frame(AUC1 = formattable(AUC1original, digits = 4, format = "f"),
+                      AUC2 = formattable(AUC2original, digits = 4, format = "f"),
+                      p_value_probit = formattable(pval2t, digits = 4, format = "f"),
+                      p_value = formattable(pval2tdAUC, digits = 4, format = "f"),
+                      ci_ll = formattable(CIdiffdAUC[1], digits = 4, format = "f"),
+                      ci_ul = formattable(CIdiffdAUC[2], digits = 4, format = "f"))
+
     rownames(res) <- c("Estimates:")
-    res <- as.table(res)
+    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
     #return(list(AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_difference= pval2t, CI_difference= pnorm(CIdiff), rocbc1=roc1, rocbc2=roc2))
-    return(list(resultstable=res,AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_probit_difference= pval2t, CI_probit_difference= CIdiff, pvalue_difference= pval2tdAUC, CI_difference= CIdiffdAUC, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_probit_difference= pval2t, pvalue_difference= pval2tdAUC, CI_difference= CIdiffdAUC, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
 
   }
 }
+
 
 ```
 
@@ -1980,22 +2021,28 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
       na = length(W1alam)
       nb = length(W1blam)
 
+      s1alam=sqrt( var(W1alam)*(na-1)/na )
+      s1blam=sqrt( var(W1blam)*(nb-1)/nb )
+
       1-pnorm(qnorm(1-t,
                     mean=mean(W1alam),
-                    sd=std(W1alam)*((na-1)/na)),
+                    sd=s1alam),
               mean=mean(W1blam),
-              sd=std(W1blam)*((nb-1)/nb))
+              sd=s1blam)
     }
 
     roc2<-function(t){
       na = length(W2alam)
       nb = length(W2blam)
 
+      s2alam=sqrt( var(W2alam)*(na-1)/na )
+      s2blam=sqrt( var(W2blam)*(nb-1)/nb )
+
       1-pnorm(qnorm(1-t,
                     mean=mean(W2alam),
-                    sd=std(W2alam)*((na-1)/na)),
+                    sd=s2alam),
               mean=mean(W2blam),
-              sd=std(W2blam)*((nb-1)/nb))
+              sd=s2blam)
     }
 
     rocuseless<-function(t){
@@ -2003,11 +2050,11 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
     }
 
 
-    Sens1=1-pnorm(c1, mean=mean(W1blam), sd=sd(W1blam))
-    Spec1=  pnorm(c1, mean=mean(W1alam), sd=sd(W1alam))
+    Sens1=1-pnorm(c1, mean=mean(W1blam), sd=sqrt(var(W1blam)*(nb-1)/nb))
+    Spec1=  pnorm(c1, mean=mean(W1alam), sd=sqrt(var(W1alam)*(na-1)/na))
 
-    Sens2=1-pnorm(c2, mean=mean(W2blam), sd=sd(W2blam))
-    Spec2=  pnorm(c2, mean=mean(W2alam), sd=sd(W2alam))
+    Sens2=1-pnorm(c2, mean=mean(W2blam), sd=sqrt(var(W2blam)*(nb-1)/nb))
+    Spec2=  pnorm(c2, mean=mean(W2alam), sd=sqrt(var(W2alam)*(na-1)/na))
 
     #================IF PLOTS ARE REQUESTED PLOT THE ROCS==
     if (plots=="on") {
@@ -2024,9 +2071,9 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
       lines(c(1-Spec1,1-Spec1),c(rocuseless(1-Spec1),Sens1),col="blue")
       lines(c(1-Spec2,1-Spec2),c(rocuseless(1-Spec2),Sens2),col="green")
 
-      legend("bottomright", legend=c(paste("ROC for Marker 1 with J =", round(J1original,4), " "),
-                                     paste("ROC for Marker 2 with J =", round(J2original,4), " "),
-                                     paste("P-value for the difference:",round(pval2t,4), " ")),
+      legend("bottomright", legend=c(paste("ROC for Marker 1 with J =", formattable(J1original, digits = 4, format = "f"), " "),
+                                     paste("ROC for Marker 2 with J =", formattable(J2original, digits = 4, format = "f"), " "),
+                                     paste("P-value for the difference:", formattable(pval2t, digits = 4, format = "f"), " ")),
 
              col=c("red", "black", "white"), lty=c(1, 1, NA), pch = c(NA, NA, NA), cex=0.8)
 
@@ -2049,23 +2096,28 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
 
     #======================================================
 
+    res <- data.frame(J1 = formattable(J1original, digits = 4, format = "f"),
+                      J2 = formattable(J2original, digits = 4, format = "f"),
+                      p_value_probit = formattable(pval2t, digits = 4, format = "f"),
+                      p_value = formattable(pval2tJ, digits = 4, format = "f"),
+                      ci_ll = formattable(CIoriginal[1], digits = 4, format = "f"),
+                      ci_ul = formattable(CIoriginal[2], digits = 4, format = "f"))
 
-
-    res <- matrix(c(J1original,J2original, pval2t,CIZstar[1],CIZstar[2]),ncol=5,byrow=TRUE)
-    colnames(res) <- c("J1:","    J2:","    p-value (trans):","   CI trans (LL):","    CI trans (UL):")
     rownames(res) <- c("Estimates:")
-    res <- as.table(res)
+    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
     #return(list(AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_difference= pval2t, CI_difference= pnorm(CIdiff), rocbc1=roc1, rocbc2=roc2))
     #return(list(resultstable=res,J1=J1original,J2=J2original, pvalue_difference= pval2t, CI_difference= CIoriginal, rocbc1=roc1, rocbc2=roc2))
-    return(list(resultstable=res,J1=J1original,J2=J2original, pvalue_probit_difference= pval2t, CI_probit_difference= CIZstar, pvalue_difference= pval2tJ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,J1=J1original,J2=J2original, pvalue_probit_difference= pval2t, pvalue_difference= pval2tJ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
 
   }
 
 
 }
+
 
 ```
 
@@ -2081,8 +2133,8 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
   } else if (sum(is.na(marker1)) > 0 | sum(is.na(marker2)) > 0 | sum(is.na(D)) > 0 | sum(is.na(atSpec)) > 0) {
     stop("ERROR: Please remove all missing data before running this function.")
-  } else if (!is.numeric(atSpec)) {
-    stop("ERROR: 'atSpec' must be a numeric vector.")
+  } else if ((!is.numeric(atSpec)) | (length(atSpec) != 1)) {
+    stop("ERROR: 'atSpec' must be a single numeric value.")
   } else {
 
     erf <- function (x) 2 * pnorm(x * sqrt(2)) - 1
@@ -2483,10 +2535,16 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
     SE1=pnorm(ROC1MC)
     SE2=pnorm(ROC2MC)
 
-    res <- matrix(c(SE1,SE2, pval2t, CIZstar[1],CIZstar[2]),ncol=5,byrow=TRUE)
-    colnames(res) <- c("Sens 1:","    Sens 2:","    p-value (probit):","   CI probit (LL):","    CI probit (UL):")
+    res <- data.frame(Sens1 = formattable(SE1, digits = 4, format = "f"),
+                      Sens2 = formattable(SE2, digits = 4, format = "f"),
+                      p_value_probit = formattable(pval2t, digits = 4, format = "f"),
+                      p_value = formattable(pval2tZ, digits = 4, format = "f"),
+                      ci_ll = formattable(CIoriginal[1], digits = 4, format = "f"),
+                      ci_ul = formattable(CIoriginal[2], digits = 4, format = "f"))
+
     rownames(res) <- c("Estimates:")
-    res <- as.table(res)
+    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
@@ -2495,22 +2553,28 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
       na = length(W1alam)
       nb = length(W1blam)
 
+      s1alam=sqrt( var(W1alam)*(na-1)/na )
+      s1blam=sqrt( var(W1blam)*(nb-1)/nb )
+
       1-pnorm(qnorm(1-t,
                     mean=mean(W1alam),
-                    sd=std(W1alam)*((na-1)/na)),
+                    sd=s1alam),
               mean=mean(W1blam),
-              sd=std(W1blam)*((nb-1)/nb))
+              sd=s1blam)
     }
 
     roc2<-function(t){
       na = length(W2alam)
       nb = length(W2blam)
 
+      s2alam=sqrt( var(W2alam)*(na-1)/na )
+      s2blam=sqrt( var(W2blam)*(nb-1)/nb )
+
       1-pnorm(qnorm(1-t,
                     mean=mean(W2alam),
-                    sd=std(W2alam)*((na-1)/na)),
+                    sd=s2alam),
               mean=mean(W2blam),
-              sd=std(W2blam)*((nb-1)/nb))
+              sd=s2blam)
     }
 
     rocuseless<-function(t){
@@ -2530,9 +2594,9 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
       points(1-atSpec,SE2, col = "black")
 
 
-      legend("bottomright", legend=c(paste("ROC for Marker 1 with Sens =", round(SE1,4), "at Spec =", atSpec),
-                                     paste("ROC for Marker 2 with Sens =", round(SE2,4), "at Spec =", atSpec),
-                                     paste("P-value for the Sens difference:",round(pval2t,4))),
+      legend("bottomright", legend=c(paste("ROC for Marker 1 with Sens =", formattable(SE1, digits = 4, format = "f"), "at Spec =", formattable(atSpec, digits = 4, format = "f")),
+                                     paste("ROC for Marker 2 with Sens =", formattable(SE2, digits = 4, format = "f"), "at Spec =", formattable(atSpec, digits = 4, format = "f")),
+                                     paste("P-value for the Sens difference:", formattable(pval2t, digits = 4, format = "f"))),
 
              col=c("red", "black", "white"), lty=c(1, 1, NA), pch = c(NA, NA, NA), cex=0.8)
 
@@ -2541,13 +2605,14 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
 
 
 
-    return(list(resultstable=res,Sens1=SE1,Sens2=SE2, pvalue_probit_difference= pval2t, CI_probit_difference= CIZstar, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,Sens1=SE1,Sens2=SE2, pvalue_probit_difference= pval2t, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
 
 
 
 
   }
 }
+
 
 ```
 
@@ -2563,8 +2628,8 @@ comparebcSpec <-function (marker1, marker2, D, atSens, alpha, plots){
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
   } else if (sum(is.na(marker1)) > 0 | sum(is.na(marker2)) > 0 | sum(is.na(D)) > 0 | sum(is.na(atSens)) > 0) {
     stop("ERROR: Please remove all missing data before running this function.")
-  } else if (!is.numeric(atSens)) {
-    stop("ERROR: 'atSpec' must be a numeric vector.")
+  } else if ((!is.numeric(atSens)) | (length(atSens) != 1)) {
+    stop("ERROR: 'atSens' must be a single numeric value.")
   } else {
 
     erf <- function (x) 2 * pnorm(x * sqrt(2)) - 1
@@ -2608,22 +2673,28 @@ comparebcSpec <-function (marker1, marker2, D, atSens, alpha, plots){
       na = length(W1alam)
       nb = length(W1blam)
 
+      s1alam=sqrt(var(W1alam)*(na-1)/na)
+      s1blam=sqrt(var(W1blam)*(nb-1)/nb)
+
       1-pnorm(qnorm(1-t,
                     mean=mean(W1blam),
-                    sd=std(W1blam)*((nb-1)/nb)),
+                    sd=s1blam),
               mean=mean(W1alam),
-              sd=std(W1alam)*((na-1)/na))
+              sd=s1alam)
     }
 
     roct2<-function(t){
       na = length(W2alam)
       nb = length(W2blam)
 
+      s2alam=sqrt(var(W2alam)*(na-1)/na)
+      s2blam=sqrt(var(W2blam)*(nb-1)/nb)
+
       1-pnorm(qnorm(1-t,
                     mean=mean(W2blam),
-                    sd=std(W2blam)*((nb-1)/nb)),
+                    sd=s2blam),
               mean=mean(W2alam),
-              sd=std(W2alam)*((na-1)/na))
+              sd=s2alam)
     }
 
     rocuseless<-function(t){
@@ -2645,29 +2716,34 @@ comparebcSpec <-function (marker1, marker2, D, atSens, alpha, plots){
       #line for the Youden:
       #lines(c(1-atSpec,1-SE1),c(1-atSpec,1-SE2),col="green")
 
-      legend("bottomright", legend=c(paste("ROC for Marker 1 with FPR =", round(FPR1,4), "at Sens =", atSens),
-                                     paste("ROC for Marker 2 with FPR =", round(FPR2,4), "at Sens =", atSens),
-                                     paste("P-value for the Spec difference:",round(pval2t,4))),
+      legend("bottomright", legend=c(paste("ROC for Marker 1 with FPR =", formattable(FPR1, digits = 4, format = "f"), "at Sens =", formattable(atSens, digits = 4, format = "f")),
+                                     paste("ROC for Marker 2 with FPR =", formattable(FPR2, digits = 4, format = "f"), "at Sens =", formattable(atSens, digits = 4, format = "f")),
+                                     paste("P-value for the Spec difference:", formattable(pval2t, digits = 4, format = "f"))),
 
              col=c("red", "black", "white"), lty=c(1, 1, NA), pch = c(NA, NA, NA), cex=0.8)
 
     }
 
-
-    res <- matrix(c(FPR1,FPR2, pval2t, CIZstar[1],CIZstar[2]),ncol=5,byrow=TRUE)
-    colnames(res) <- c("FPR 1:","    FPR 2:","    p-value (probit):","   CI probit (LL):","    CI probit (UL):")
+    res <- data.frame(FPR1 = formattable(FPR1, digits = 4, format = "f"),
+                      FPR2 = formattable(FPR2, digits = 4, format = "f"),
+                      p_value_probit = formattable(pval2t, digits = 4, format = "f"),
+                      p_value = formattable(pval2tZ, digits = 4, format = "f"),
+                      ci_ll = formattable(CIoriginal[1], digits = 4, format = "f"),
+                      ci_ul = formattable(CIoriginal[2], digits = 4, format = "f"))
     rownames(res) <- c("Estimates:")
-    res <- as.table(res)
+    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
     #return(list(resultstable=res,Sens1=SE1,Sens2=SE2, pvalue_probit_difference= pval2t, CI_probit_difference= CIZstar, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
-    return(list(resultstable=res,FPR1=FPR1,FPR2=FPR2, pvalue_probit_difference= pval2t, CI_probit_difference= CIZstar, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roct1, roc2=roct2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,FPR1=FPR1,FPR2=FPR2, pvalue_probit_difference= pval2t, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roct1, roc2=roct2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
     #return(list(FPR1=FPR1))
 
 
   }
 }
+
 
 ```
 
@@ -2725,10 +2801,10 @@ The functions of each part:
   + ```transformation.parameter```: The single transformation parameter $\lambda$ that is applied for both groups simultaneously.
   + ```transx```: The Box-Cox transformed scores for the healthy.
   + ```transy```: The Box-Cox transformed scores for the diseased.
-  + ```pval_x1```: The p-value of the Shapiro-Wilk test of normality for the healthy group (before the Box-Cox transformation).
-  + ```pval_x2```: The p-value of the Shapiro-Wilk test of normality for the diseased group (before the Box-Cox transformation).
-  + ```pval_x1trans```: The p-value of the Shapiro-Wilk test of normality for the healthy group (after the Box-Cox transformation).
-  + ```pval_x2trans```: The p-value of the Shapiro-Wilk test of normality for the diseased group (after the Box-Cox transformation).
+  + ```pval_x```: The p-value of the Shapiro-Wilk test of normality for the healthy group (before the Box-Cox transformation).
+  + ```pval_y```: The p-value of the Shapiro-Wilk test of normality for the diseased group (before the Box-Cox transformation).
+  + ```pval_transx```: The p-value of the Shapiro-Wilk test of normality for the healthy group (after the Box-Cox transformation).
+  + ```pval_transy```: The p-value of the Shapiro-Wilk test of normality for the diseased group (after the Box-Cox transformation).
   
 
 

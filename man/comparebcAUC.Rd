@@ -25,7 +25,6 @@ comparebcAUC(marker1, marker2, D, alpha, plots)
   \item{AUCmarker1}{The AUC of the first marker.}
   \item{AUCmarker2}{The AUC of the second marker.}
   \item{pvalue_probit_difference}{The p-value for the comparison of the AUCs. It employs the probit transformation that has greater power than when not using it (as in pvalue_difference).}
-  \item{CI_probit_difference}{The confidence interval for the difference of the probits of the AUCs.}
   \item{pvalue_difference}{The p-value for the comparisons of the AUC (without the probit transformation). Simulations have shown that this is inferior to the ‘pvalue_probit_difference’.}
   \item{CI_difference}{The confidence interval for the difference of the AUCs.}
   \item{roc1}{A function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.}

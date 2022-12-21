@@ -18,7 +18,8 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
 
     x = xor
     y = yor
-    scores = c(x, y)
+    scores = marker
+    # scores = c(x, y)
 
     #====THIS IS THE LIKELIHOOD OF THE BOXCOX TRANSFORMATION=======================================
     #INPUT ARGUMENTS: TWO GROUPS (x,y) and plots="on" or "off"====================================
@@ -134,11 +135,18 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
 
     #====TWO ROC FUNCTIONS: ONE IS THE BOXCOX AND THE OTHER THE REFERENCE LINE================
     roc<-function(t){
+
+      na = length(transx)
+      nb = length(transy)
+
+      stransx=sqrt( var(transx)*(na-1)/na )
+      stransy=sqrt( var(transy)*(nb-1)/nb )
+
       1-pnorm(qnorm(1-t,
                     mean=mean(transx),
-                    sd=std(transx)*(length(transx)-1)/(length(transx))),
+                    sd=stransx),
               mean=mean(transy),
-              sd=std(transy)*(length(transy)-1)/(length(transy)))
+              sd=stransy)
     }
 
     rocuseless<-function(t){
@@ -163,7 +171,7 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
     }
 
     #================OUTPUT ARGUMENTS======================
-    return(list(transformation.parameter=lam,transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam, pval_x1=pvalues[1], pval_x2=pvalues[2],pval_x1trans=pvalues[3], pval_x2trans=pvalues[4], rocbc=roc ))
+    return(list(transformation.parameter=lam,transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam, pval_x=pvalues[1], pval_y=pvalues[2],pval_transx=pvalues[3], pval_transy=pvalues[4], rocbc=roc ))
 
   }
 }

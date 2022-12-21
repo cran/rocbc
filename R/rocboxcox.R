@@ -97,12 +97,19 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     #qqnorm(y)
     #title(main="                                         for Y")
 
-    roc<-function(t,x,y){
+    roc<-function(t,trans_x,trans_y){
+
+      na = length(trans_x)
+      nb = length(trans_y)
+
+      stransx=sqrt(var(trans_x)*(na-1)/na)
+      stransy=sqrt(var(trans_y)*(nb-1)/nb)
+
       1-pnorm(qnorm(1-t,
-                    mean=mean(transx),
-                    sd=std(transx)*(length(transx)-1)/(length(transx))),
-              mean=mean(transy),
-              sd=std(transy)*(length(transy)-1)/(length(transy)))
+                    mean=mean(trans_x),
+                    sd=stransx),
+              mean=mean(trans_y),
+              sd=stransy)
     }
 
     rocuseless<-function(t){
@@ -110,17 +117,17 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     }
 
     if (plots=="on"){
-      txt <- paste("Box-Cox Based ROC, alpha =", round(alpha,3) )
+      txt <- paste("Box-Cox Based ROC, alpha =", formattable(alpha, digits = 3))
       plot(linspace(0,1,1000),roc(linspace(0,1,1000),transx,transy),main=" ",xlab="FPR = 1 - Specificity",ylab="TPR = Sensitivity",type="l",col="red")
       lines(linspace(0,1,10),linspace(0,1,10),type="l", lty=2)
       title(main=txt)
 
     }
-    rocfun=function(t){1-pnorm(qnorm(1-t,mean=mean(transx),sd=std(transx)*(length(transx)-1)/(length(transx))),mean=mean(transy),sd=std(transy)*(length(transy)-1)/(length(transy)))}
+    rocfun=function(t){1-pnorm(qnorm(1-t,mean=mean(transx),sd=sqrt(var(transx)*(length(transx)-1)/length(transx))),mean=mean(transy),sd=sqrt(var(transy)*(length(transy)-1)/length(transy)))}
     m1hat=mean(transx)
     m2hat=mean(transy)
-    s1hat=std(transx)*(length(transx)-1)/(length(transx))
-    s2hat=std(transy)*(length(transx)-1)/(length(transx))
+    s1hat=sqrt(var(transx)*(length(transx)-1)/length(transx))
+    s2hat=sqrt(var(transy)*(length(transy)-1)/length(transy))
     n1=length(x)
     n2=length(y)
 
@@ -372,8 +379,8 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
 
       m1hat_boots=mean(transx1_boots)
       m2hat_boots=mean(transx2_boots)
-      s1hat_boots=std(transx1_boots)*(length(transx1_boots)-1)/(length(transx1_boots))
-      s2hat_boots=std(transx2_boots)*(length(transx2_boots)-1)/(length(transx2_boots))
+      s1hat_boots=sqrt(var(transx1_boots)*(length(transx1_boots)-1)/length(transx1_boots))
+      s2hat_boots=sqrt(var(transx2_boots)*(length(transx2_boots)-1)/length(transx2_boots))
 
       b=s2hat_boots/s1hat_boots
       a=m2hat_boots-m1hat_boots
@@ -405,31 +412,31 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
 
     if (plots=="on"){
       legend("bottomright", legend=c(paste("ROC estimate with AUC = ",
-                                           round(auc,4),
+                                           formattable(auc, digits = 4, format = "f"),
                                            ", CI: (",
-                                           round(CIauc[1],4),
+                                           formattable(CIauc[1], digits = 4, format = "f"),
                                            ", ",
-                                           round(CIauc[2],4) ,")", sep = ""),
-                                     paste("Maximized Youden index = ",round(Jhat,4),
+                                           formattable(CIauc[2], digits = 4, format = "f") ,")", sep = ""),
+                                     paste("Maximized Youden index = ", formattable(Jhat, digits = 4, format = "f"),
                                            ", CI: (",
-                                           round((CIJ[1]),4),
+                                           formattable((CIJ[1]), digits = 4, format = "f"),
                                            ", ",
-                                           round((CIJ[2]),4), ")", sep = ""),
+                                           formattable((CIJ[2]), digits = 4, format = "f"), ")", sep = ""),
                                      paste("Optimal pair of (FPR,TPR): (",
-                                           round(1-Sp,4),
+                                           formattable(1-Sp, digits = 4, format = "f"),
                                            ", ",
-                                           round(Se,4), ")", sep = ""),
-                                     paste("Area of the rect. conf. region =",round(arearect,4)),
-                                     paste("Area of the egg conf. region =",round(areaegg,4)),
-                                     paste("Youden based cutoff: ",round(cutoff,4),", CI: (",
-                                           round(CIcutoff[1],4),
+                                           formattable(Se, digits = 4, format = "f"), ")", sep = ""),
+                                     paste("Area of the rect. conf. region =", formattable(arearect, digits = 4, format = "f")),
+                                     paste("Area of the egg conf. region =", formattable(areaegg, digits = 4, format = "f")),
+                                     paste("Youden based cutoff: ", formattable(cutoff, digits = 4, format = "f"),", CI: (",
+                                           formattable(CIcutoff[1], digits = 4, format = "f"),
                                            ", ",
-                                           round(CIcutoff[2],4), ")", sep = ""),
+                                           formattable(CIcutoff[2], digits = 4, format = "f"), ")", sep = ""),
                                      paste("Sp Marginal CI: (",
-                                           c(round(margcisp[1],4)), ", ", round(margcisp[2],4),
+                                           c(formattable(margcisp[1], digits = 4, format = "f")), ", ", formattable(margcisp[2], digits = 4, format = "f"),
                                            ")", sep = ""),
                                      paste("Se Marginal CI: (",
-                                           c(round(margcise[1],4)), ", ", round(margcise[2],4), ")",
+                                           c(formattable(margcise[1], digits = 4, format = "f")), ", ", formattable(margcise[2], digits = 4, format = "f"), ")",
                                            sep = "")),
              col=c("red", "blue", "red", "black", "green", "white", "white", "white"),
              lty=c(1,1,1,1,1,1,NA, NA),
@@ -448,13 +455,14 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
                     Se,margcise[1],margcise[2]),ncol=3,byrow=TRUE)
     colnames(res) <- c("Estimate","Confidence","Interval")
     rownames(res) <- c("AUC","Jhat","cutoff","Sp","Se")
-    res <- as.table(res)
+    res <- data.frame(res)
+    res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
     if (auc < 0.5) {
       print("NOTE: AUC < 0.5; the ordering of the two groups may need to be reversed.")
     }
 
-    return(list(transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam , transformation.parameter=lam, AUC=auc, AUCCI=CIauc, pvalueAUC=pvalauc, J=Jhat, JCI=CIJ, pvalueJ=pvalJ, Sens=Se, CImarginalSens=margcise, Spec=Sp, CImarginalSpec=margcisp, cutoff=cutoff, CIcutoff=CIcutoff,  areaegg=areaegg, arearect=arearect, mxlam=mean(transx), sxlam=std(transx)*(length(transx)-1)/(length(transx)), mylam=mean(transy), sylam=std(transy)*(length(transy)-1)/(length(transy)), results=res , rocfun=rocfun))
+    return(list(transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam , transformation.parameter=lam, AUC=auc, AUCCI=CIauc, pvalueAUC=pvalauc, J=Jhat, JCI=CIJ, pvalueJ=pvalJ, Sens=Se, CImarginalSens=margcise, Spec=Sp, CImarginalSpec=margcisp, cutoff=cutoff, CIcutoff=CIcutoff,  areaegg=areaegg, arearect=arearect, mxlam=mean(transx), sxlam=sqrt(var(transx)*(length(transx)-1)/length(transx)), mylam=mean(transy), sylam=sqrt(var(transy)*(length(transy)-1)/length(transy)), results=res , rocfun=rocfun))
   }
 }
