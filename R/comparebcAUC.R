@@ -8,6 +8,8 @@ comparebcAUC <-function (marker1, marker2, D, alpha, plots){
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
   } else if (sum(is.na(marker1)) > 0 | sum(is.na(marker2)) > 0 | sum(is.na(D)) > 0) {
     stop("ERROR: Please remove all missing data before running this function.")
+  } else if ((sum(marker1 < 0) > 0) | (sum(marker2 < 2)) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     erf <- function (x) 2 * pnorm(x * sqrt(2)) - 1
@@ -485,19 +487,33 @@ comparebcAUC <-function (marker1, marker2, D, alpha, plots){
 
     res <- data.frame(AUC1 = formattable(AUC1original, digits = 4, format = "f"),
                       AUC2 = formattable(AUC2original, digits = 4, format = "f"),
+                      diff = formattable(AUC2original - AUC1original, digits = 4, format = "f"),
                       p_value_probit = formattable(pval2t, digits = 4, format = "f"),
                       p_value = formattable(pval2tdAUC, digits = 4, format = "f"),
                       ci_ll = formattable(CIdiffdAUC[1], digits = 4, format = "f"),
                       ci_ul = formattable(CIdiffdAUC[2], digits = 4, format = "f"))
 
     rownames(res) <- c("Estimates:")
-    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    colnames(res) <- c("AUC 1", "AUC 2", "Diff", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
     res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
     #return(list(AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_difference= pval2t, CI_difference= pnorm(CIdiff), rocbc1=roc1, rocbc2=roc2))
-    return(list(resultstable=res,AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_probit_difference= pval2t, pvalue_difference= pval2tdAUC, CI_difference= CIdiffdAUC, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,
+                AUCmarker1=AUC1original,
+                AUCmarker2=AUC2original,
+                pvalue_probit_difference= pval2t,
+                pvalue_difference= pval2tdAUC,
+                CI_difference= CIdiffdAUC,
+                roc1=roc1,
+                roc2=roc2,
+                transx1=W1alam,
+                transy1=W1blam,
+                transformation.parameter.1 = lam[1],
+                transx2=W2alam,
+                transy2=W2blam,
+                transformation.parameter.2 = lam[2]))
 
   }
 }

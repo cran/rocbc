@@ -11,11 +11,12 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
   } else if (min(marker<= 0)) {
     stop("ERROR: All marker scores need to be positive")
+  } else if (sum(marker < 0) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     x=marker[D==0]
     y=marker[D==1]
-
 
     if (plots!="on"){plots="off"}
     n1=length(x)
@@ -43,10 +44,6 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
       return(out)
     }
 
-
-
-
-
     boxcoxleo<-function(x,y){
       init=1;
       logL<-function(h){
@@ -66,7 +63,6 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
       return(list(transformation.parameter=lam,transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam ))
     }
 
-
     boxcoxleo2<-function(x,y){
       init=1;
       logL<-function(h){
@@ -79,11 +75,67 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
       transx=((x^lam)-1)/lam
       transy=((y^lam)-1)/lam
 
-
-
       return(list(transformation.parameter=lam,transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam ))
     }
 
+    COVlam <-function (x,y){
+
+      #%Accepts X<Y Yields as an output the Variance Covariance matrix
+      #%of the mh, sh, md, sd, and lam, (with this order) where lam is the estimated boxcox
+      #%parameter Thus, the output will be a 5x5 matrix
+
+      #%---FOR TWO POPULATIONS:
+
+      n=length(x); #original scores
+      m=length(y);
+
+      #  %mh-->g(1)
+      #  %sh-->g(2)
+      #  %md-->g(3)
+      #  %sd-->g(4)
+      #  %lam-->g(5)
+      #  %  logL=@(g) -n*log(sh)-1/(2*sh^2)*sum((xlam-mh)^2)+(lam-1)*sum(log(x)) -
+      #  %             m*log(sd)-1/(2*sd^2)*sum((ylam-md)^2)+(lam-1)*sum(log(y))
+
+      outt=boxcoxleo(x,y); #the original scores
+      transx=outt$transx
+      transy=outt$transy
+      lam=outt$transformation.parameter
+
+
+      mh=mean(transx); xlam=transx;
+      md=mean(transy); ylam=transy;
+      sh=sqrt(1/(length(transx))*sum((transx-mean(transx))^2));
+      sd=sqrt(1/(length(transy))*sum((transy-mean(transy))^2));
+
+
+      I=zeros(5,5);
+      I[1,1]=n/sh^2;
+      I[2,2]=-(n/sh^2-3/sh^4*sum((xlam-mh)^2));
+      I[3,3]=m/sd^2;
+      I[4,4]=-(m/sd^2-3/sd^4*sum((ylam-md)^2));
+
+      kk=  sum(((mh - (x^lam - 1)/lam)*((2*(x^lam - 1))/lam^3 - (2*x^lam*log(x))/lam^2 + (x^lam*log(x)^2)/lam))/sh^2) +  - sum(((y^lam - 1)/lam^2 - (y^lam*log(y))/lam)^2/sd^2) +   - sum(((x^lam - 1)/lam^2 - (x^lam*log(x))/lam)^2/sh^2) +   + sum(((md - (y^lam - 1)/lam)*((2*(y^lam - 1))/lam^3 - (2*y^lam*log(y))/lam^2 + (y^lam*log(y)^2)/lam))/sd^2);
+      I[5,5]=-kk ;
+
+      I[1,5]=sum(((2*(x^lam - 1))/lam^2 - (2*x^lam*log(x))/lam)/(2*sh^2));
+      I[2,5]=-sum((2*((x^lam - 1)/lam^2 - (x^lam*log(x))/lam)*(mh - (x^lam - 1)/lam))/sh^3);
+      I[3,5]=-sum(-((2*(y^lam - 1))/lam^2 - (2*y^lam*log(y))/lam)/(2*sd^2));
+
+
+      I[4,5]=-sum((2*((y^lam - 1)/lam^2 - (y^lam*log(y))/lam)*(md - (y^lam - 1)/lam))/sd^3);
+
+      I[5,1]=I[1,5];
+      I[5,2]=I[2,5];
+      I[5,3]=I[3,5];
+      I[5,4]=I[4,5];
+
+
+      S= inv(I); #%that's better
+
+      return(list(out=S))
+
+    }
 
     cc=boxcoxleo(x,y)
 
@@ -136,17 +188,34 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     #            s1hat->s1hat
     #            s2hat->s2hat
 
+    #########################################
 
-    vardeltasp= (-((s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + 1)/s1hat)^2*(s1hat^2/n1)+((m1hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s1hat^2 - ((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat)^2*(s1hat^2/(2*n1-2))+((s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat*(s1hat^2 - s2hat^2)))^2*(s2hat^2/n2)+(-((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat)^2*(s2hat^2/(2*n2-2))
+    derde =c( (s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s2hat*(s1hat^2 - s2hat^2)), ((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat, -((s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - 1)/s2hat, ((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat - (m2hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s2hat^2);
+    derdp =c( -((s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + 1)/s1hat, (m1hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s1hat^2 - ((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat, (s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat*(s1hat^2 - s2hat^2)), -((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat);
 
-    #delta method for var of delta_se
-    vardeltase= ((s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s2hat*(s1hat^2 - s2hat^2)))^2*(s1hat^2/n1)+(((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat)^2*(s1hat^2/(2*n1-2))+(-((s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - 1)/s2hat)^2*(s2hat^2/n2)+(((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat - (m2hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s2hat^2)^2*(s2hat^2/(2*n2-2))
+    outt=COVlam(xor,yor);
 
-    #delta method for delta_e, delta_p covariance
-    covdedp= ((s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s2hat*(s1hat^2 - s2hat^2)))*(-((s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + 1)/s1hat)*(s1hat^2/n1)+(((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat)*((m1hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s1hat^2 - ((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat)*(s1hat^2/(2*n1-2))+(-((s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - 1)/s2hat)*((s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat*(s1hat^2 - s2hat^2)))*(s2hat^2/n2)+(((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat - (m2hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s2hat^2)*(-((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat)*(s2hat^2/(2*n2-2))
+    S=outt$out;
+    S=S[1:4,1:4];
+
+    if (sum(is.infinite(S)) > 0 |
+        sum(is.nan(S)) > 0 |
+        sum(is.na(S)) > 0 |
+        sum(diag(S) < 0) > 0) {
+      stop("ERROR: The information matrix cannot be inverted - this might be due to the scale of the marker. Try rescaling the marker measurements by subtracting a constant or by dividing with a constant all marker measurements (of both groups) before you try again.")
+    }
+
+    varde=t(derde)%*%S%*%t(t(derde));
+    vardp=t(derdp)%*%S%*%t(t(derdp));
+    covdedp=t(derde)%*%S%*%t(t(derdp));
+    ##########################################
+
+    vardeltase=varde;
+    vardeltasp=vardp;
+
+    #########################
 
     cutoff= (s1hat^2*m2hat-s2hat^2*m1hat-s1hat*s2hat*sqrt((m1hat-m2hat)^2+(s1hat^2-s2hat^2)*log(s1hat^2/s2hat^2)))/(s1hat^2-s2hat^2)
-
     deltasp= (((s1hat^2*m2hat-s2hat^2*m1hat-s1hat*s2hat*sqrt((m1hat-m2hat)^2+(s1hat^2-s2hat^2)*log(s1hat^2./s2hat^2)))/(s1hat^2-s2hat^2))-m1hat)/(s1hat)
     deltase= (m2hat-((s1hat^2*m2hat-s2hat^2*m1hat-s1hat*s2hat*sqrt((m1hat-m2hat)^2+(s1hat^2-s2hat^2)*log(s1hat^2/s2hat^2)))/(s1hat^2-s2hat^2)))/s2hat
 
@@ -159,10 +228,13 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     if (plots=="on"){
       points(1-Sp,Se, col = "red")
     }
+
     covdeltas = matrix( c(vardeltasp, covdedp, covdedp, vardeltase), nrow=2, ncol=2,  byrow = TRUE)        # fill m
 
-
-
+    if (sum(is.infinite(covdeltas)) > 0 |
+        sum(is.nan(covdeltas)) > 0) {
+      stop("ERROR: The information matrix cannot be inverted - this might be due to the scale of the marker. Try rescaling the marker measurements by subtracting a constant or by dividing with a constant all marker measurements (of both groups) before you try again.")
+    }
 
     svdA=svd(inv(covdeltas))
     a=sqrt(qchisq(1-alpha,2))/sqrt(svdA$d[1])
@@ -278,6 +350,8 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     S=inv(I)
 
     S=S[1:4,1:4]
+
+    ## EVERYTHING ELSE ================================================================================
 
     varauc=t(c(dm1,ds1,dm2,ds2))%*% S %*% t(t(c(dm1,ds1,dm2,ds2)))
 
@@ -444,17 +518,16 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
 
     }
 
-
-
     #return(list(transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam , transformation.parameter=lam, AUC=auc, AUCCI=CIauc, J=Jhat, JCI=CIJ, Sens=Se, CImarginalSens=margcise, Spec=Sp, CImarginalSpec=margcisp, cutoff=cutoff, CIcutoff=CIcutoff, areaegg=areaegg, arearect=arearect, mxlam=mean(transx), sxlam=std(transx), mylam=mean(transy), sylam=std(transy)))
 
     res <- matrix(c(auc,CIauc[1],CIauc[2],
                     Jhat,CIJ[1],CIJ[2],
                     cutoff,CIcutoff[1],CIcutoff[2],
                     Sp,margcisp[1],margcisp[2],
-                    Se,margcise[1],margcise[2]),ncol=3,byrow=TRUE)
+                    Se,margcise[1],margcise[2],
+                    lam,NA,NA),ncol=3,byrow=TRUE)
     colnames(res) <- c("Estimate","Confidence","Interval")
-    rownames(res) <- c("AUC","Jhat","cutoff","Sp","Se")
+    rownames(res) <- c("AUC","Jhat","cutoff","Sp","Se", "Lambda")
     res <- data.frame(res)
     res <- formattable(as.matrix(res), digits = 4, format = "f")
     res

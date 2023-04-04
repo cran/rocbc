@@ -25,8 +25,8 @@ rocboxcoxCI(marker, D, givenSP, givenSE, alpha, plots)
 \value{
   \item{SPandCIs}{The specificity values and the CIs around them.}
   \item{SEandCIs}{The sensitivity values and the CIs around them.}
-  \item{SEvalues}{The sensitivity values provided by the user at which the specificity was calculated. If the user did not provide any sensitivity values, this argument is set to NA.}
-  \item{SPvalues}{The specificity values provided by the user at which the sensitivity was calculated. If the user did not provide any specificity values, this argument is set to NA.}
+  \item{SEvalues}{The sensitivity values provided by the user at which the specificity was calculated. If the user did not provide any sensitivity values, this argument should be set to NA.}
+  \item{SPvalues}{The specificity values provided by the user at which the sensitivity was calculated. If the user did not provide any specificity values, this argument should be set to NA.}
 }
 
 \references{

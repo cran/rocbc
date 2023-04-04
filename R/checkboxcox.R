@@ -10,6 +10,8 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
     stop("ERROR: Controls must be assigned a value of 0; cases must be assigned a value of 1. Both controls and cases should be included in the dataset.")
   } else if (sum(is.na(marker)) > 0 | sum(is.na(D)) > 0) {
     stop("ERROR: Please remove all missing data before running this function.")
+  } else if (sum(marker < 0) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     statusD=D;
@@ -129,6 +131,8 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
       qqline(transy, col = 2,lwd=2,lty=2)
 
       par(mar = c(5.1, 4.1, 4.1, 2.1))
+
+      par(mfrow=c(1,1))
 
     }
 

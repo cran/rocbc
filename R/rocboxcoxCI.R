@@ -12,6 +12,8 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
   } else if (!((sum(is.na(givenSP)) == 0 & sum(is.na(givenSE) > 0)) |
                (sum(is.na(givenSE)) == 0 & sum(is.na(givenSP) > 0)))) {
     stop("ERROR: Exactly one of 'givenSP' and 'givenSE' must be set to NA.")
+  } else if (sum(marker < 0) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     #graphics.off()
@@ -252,8 +254,8 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
 
 
     Spvalues=1-tt;FPRvalues=tt;
-    SEandCIs = matrix( c(Spvalues,FPRvalues, Sehat, CIROCvec1,CIROCvec2), nrow=length(CIROCvec1), ncol=5)
-    colnames(SEandCIs)  <- c("Given Sp","Given FPR", "Sehat","LL of 95%CI","UL of 95%CI")
+    SEandCIs = matrix( c(Spvalues, Sehat, CIROCvec1,CIROCvec2), nrow=length(CIROCvec1), ncol=4)
+    colnames(SEandCIs)  <- c("Given Sp", "Sehat","LL of 95%CI","UL of 95%CI")
     SEandCIs
 
     CIlowSe=CIROCvec1
@@ -355,7 +357,15 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
     CIlowSp=CIROCvec1
     CIuppSp=CIROCvec2
     CIsp=t(rbind(CIlowSp,CIuppSp))
-    return(list(SPandCIs=SPandCIs, SEandCIs=SEandCIs, Sevalues=Sevalues, Sphat=Sphat, CIsp=CIsp, Spvalues=Spvalues, Sphat=Sphat, CIse=CIse ))
+
+    return(list(SPandCIs=formattable(as.matrix(SPandCIs), digits = 4, format = "f"),
+                SEandCIs=formattable(as.matrix(SEandCIs), digits = 4, format = "f"),
+                Sevalues=Sevalues,
+                Sphat=Sphat,
+                CIsp=formattable(as.matrix(CIsp), digits = 4, format = "f"),
+                Spvalues=Spvalues,
+                Sehat=Sehat,
+                CIse=formattable(as.matrix(CIse), digits = 4, format = "f")))
 
 
   }

@@ -46,11 +46,12 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
   } else if (min(marker<= 0)) {
     stop("ERROR: All marker scores need to be positive")
+  } else if (sum(marker < 0) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     x=marker[D==0]
     y=marker[D==1]
-
 
     if (plots!="on"){plots="off"}
     n1=length(x)
@@ -78,10 +79,6 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
       return(out)
     }
 
-
-
-
-
     boxcoxleo<-function(x,y){
       init=1;
       logL<-function(h){
@@ -101,7 +98,6 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
       return(list(transformation.parameter=lam,transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam ))
     }
 
-
     boxcoxleo2<-function(x,y){
       init=1;
       logL<-function(h){
@@ -114,11 +110,67 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
       transx=((x^lam)-1)/lam
       transy=((y^lam)-1)/lam
 
-
-
       return(list(transformation.parameter=lam,transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam ))
     }
 
+    COVlam <-function (x,y){
+
+      #%Accepts X<Y Yields as an output the Variance Covariance matrix
+      #%of the mh, sh, md, sd, and lam, (with this order) where lam is the estimated boxcox
+      #%parameter Thus, the output will be a 5x5 matrix
+
+      #%---FOR TWO POPULATIONS:
+
+      n=length(x); #original scores
+      m=length(y);
+
+      #  %mh-->g(1)
+      #  %sh-->g(2)
+      #  %md-->g(3)
+      #  %sd-->g(4)
+      #  %lam-->g(5)
+      #  %  logL=@(g) -n*log(sh)-1/(2*sh^2)*sum((xlam-mh)^2)+(lam-1)*sum(log(x)) -
+      #  %             m*log(sd)-1/(2*sd^2)*sum((ylam-md)^2)+(lam-1)*sum(log(y))
+
+      outt=boxcoxleo(x,y); #the original scores
+      transx=outt$transx
+      transy=outt$transy
+      lam=outt$transformation.parameter
+
+
+      mh=mean(transx); xlam=transx;
+      md=mean(transy); ylam=transy;
+      sh=sqrt(1/(length(transx))*sum((transx-mean(transx))^2));
+      sd=sqrt(1/(length(transy))*sum((transy-mean(transy))^2));
+
+
+      I=zeros(5,5);
+      I[1,1]=n/sh^2;
+      I[2,2]=-(n/sh^2-3/sh^4*sum((xlam-mh)^2));
+      I[3,3]=m/sd^2;
+      I[4,4]=-(m/sd^2-3/sd^4*sum((ylam-md)^2));
+
+      kk=  sum(((mh - (x^lam - 1)/lam)*((2*(x^lam - 1))/lam^3 - (2*x^lam*log(x))/lam^2 + (x^lam*log(x)^2)/lam))/sh^2) +  - sum(((y^lam - 1)/lam^2 - (y^lam*log(y))/lam)^2/sd^2) +   - sum(((x^lam - 1)/lam^2 - (x^lam*log(x))/lam)^2/sh^2) +   + sum(((md - (y^lam - 1)/lam)*((2*(y^lam - 1))/lam^3 - (2*y^lam*log(y))/lam^2 + (y^lam*log(y)^2)/lam))/sd^2);
+      I[5,5]=-kk ;
+
+      I[1,5]=sum(((2*(x^lam - 1))/lam^2 - (2*x^lam*log(x))/lam)/(2*sh^2));
+      I[2,5]=-sum((2*((x^lam - 1)/lam^2 - (x^lam*log(x))/lam)*(mh - (x^lam - 1)/lam))/sh^3);
+      I[3,5]=-sum(-((2*(y^lam - 1))/lam^2 - (2*y^lam*log(y))/lam)/(2*sd^2));
+
+
+      I[4,5]=-sum((2*((y^lam - 1)/lam^2 - (y^lam*log(y))/lam)*(md - (y^lam - 1)/lam))/sd^3);
+
+      I[5,1]=I[1,5];
+      I[5,2]=I[2,5];
+      I[5,3]=I[3,5];
+      I[5,4]=I[4,5];
+
+
+      S= inv(I); #%that's better
+
+      return(list(out=S))
+
+    }
 
     cc=boxcoxleo(x,y)
 
@@ -171,17 +223,34 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     #            s1hat->s1hat
     #            s2hat->s2hat
 
+    #########################################
 
-    vardeltasp= (-((s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + 1)/s1hat)^2*(s1hat^2/n1)+((m1hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s1hat^2 - ((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat)^2*(s1hat^2/(2*n1-2))+((s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat*(s1hat^2 - s2hat^2)))^2*(s2hat^2/n2)+(-((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat)^2*(s2hat^2/(2*n2-2))
+    derde =c( (s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s2hat*(s1hat^2 - s2hat^2)), ((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat, -((s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - 1)/s2hat, ((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat - (m2hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s2hat^2);
+    derdp =c( -((s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + 1)/s1hat, (m1hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s1hat^2 - ((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat, (s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat*(s1hat^2 - s2hat^2)), -((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat);
 
-    #delta method for var of delta_se
-    vardeltase= ((s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s2hat*(s1hat^2 - s2hat^2)))^2*(s1hat^2/n1)+(((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat)^2*(s1hat^2/(2*n1-2))+(-((s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - 1)/s2hat)^2*(s2hat^2/n2)+(((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat - (m2hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s2hat^2)^2*(s2hat^2/(2*n2-2))
+    outt=COVlam(xor,yor);
 
-    #delta method for delta_e, delta_p covariance
-    covdedp= ((s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s2hat*(s1hat^2 - s2hat^2)))*(-((s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + 1)/s1hat)*(s1hat^2/n1)+(((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat)*((m1hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s1hat^2 - ((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat)*(s1hat^2/(2*n1-2))+(-((s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - 1)/s2hat)*((s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat*(s1hat^2 - s2hat^2)))*(s2hat^2/n2)+(((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat - (m2hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s2hat^2)*(-((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat)*(s2hat^2/(2*n2-2))
+    S=outt$out;
+    S=S[1:4,1:4];
+
+    # if (sum(is.infinite(S)) > 0 |
+    #     sum(is.nan(S)) > 0 |
+    #     sum(is.na(S)) > 0 |
+    #     sum(diag(S) < 0) > 0) {
+    #   stop("ERROR: The information matrix cannot be inverted - this might be due to the scale of the marker. Try rescaling the marker measurements by subtracting a constant or by dividing with a constant all marker measurements (of both groups) before you try again.")
+    # }
+
+    varde=t(derde)%*%S%*%t(t(derde));
+    vardp=t(derdp)%*%S%*%t(t(derdp));
+    covdedp=t(derde)%*%S%*%t(t(derdp));
+    ##########################################
+
+    vardeltase=varde;
+    vardeltasp=vardp;
+
+    #########################
 
     cutoff= (s1hat^2*m2hat-s2hat^2*m1hat-s1hat*s2hat*sqrt((m1hat-m2hat)^2+(s1hat^2-s2hat^2)*log(s1hat^2/s2hat^2)))/(s1hat^2-s2hat^2)
-
     deltasp= (((s1hat^2*m2hat-s2hat^2*m1hat-s1hat*s2hat*sqrt((m1hat-m2hat)^2+(s1hat^2-s2hat^2)*log(s1hat^2./s2hat^2)))/(s1hat^2-s2hat^2))-m1hat)/(s1hat)
     deltase= (m2hat-((s1hat^2*m2hat-s2hat^2*m1hat-s1hat*s2hat*sqrt((m1hat-m2hat)^2+(s1hat^2-s2hat^2)*log(s1hat^2/s2hat^2)))/(s1hat^2-s2hat^2)))/s2hat
 
@@ -194,10 +263,13 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     if (plots=="on"){
       points(1-Sp,Se, col = "red")
     }
+
     covdeltas = matrix( c(vardeltasp, covdedp, covdedp, vardeltase), nrow=2, ncol=2,  byrow = TRUE)        # fill m
 
-
-
+    # if (sum(is.infinite(covdeltas)) > 0 |
+    #     sum(is.nan(covdeltas)) > 0) {
+    #   stop("ERROR: The information matrix cannot be inverted - this might be due to the scale of the marker. Try rescaling the marker measurements by subtracting a constant or by dividing with a constant all marker measurements (of both groups) before you try again.")
+    # }
 
     svdA=svd(inv(covdeltas))
     a=sqrt(qchisq(1-alpha,2))/sqrt(svdA$d[1])
@@ -313,6 +385,8 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     S=inv(I)
 
     S=S[1:4,1:4]
+
+    ## EVERYTHING ELSE ================================================================================
 
     varauc=t(c(dm1,ds1,dm2,ds2))%*% S %*% t(t(c(dm1,ds1,dm2,ds2)))
 
@@ -479,17 +553,16 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
 
     }
 
-
-
     #return(list(transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam , transformation.parameter=lam, AUC=auc, AUCCI=CIauc, J=Jhat, JCI=CIJ, Sens=Se, CImarginalSens=margcise, Spec=Sp, CImarginalSpec=margcisp, cutoff=cutoff, CIcutoff=CIcutoff, areaegg=areaegg, arearect=arearect, mxlam=mean(transx), sxlam=std(transx), mylam=mean(transy), sylam=std(transy)))
 
     res <- matrix(c(auc,CIauc[1],CIauc[2],
                     Jhat,CIJ[1],CIJ[2],
                     cutoff,CIcutoff[1],CIcutoff[2],
                     Sp,margcisp[1],margcisp[2],
-                    Se,margcise[1],margcise[2]),ncol=3,byrow=TRUE)
+                    Se,margcise[1],margcise[2],
+                    lam,NA,NA),ncol=3,byrow=TRUE)
     colnames(res) <- c("Estimate","Confidence","Interval")
-    rownames(res) <- c("AUC","Jhat","cutoff","Sp","Se")
+    rownames(res) <- c("AUC","Jhat","cutoff","Sp","Se", "Lambda")
     res <- data.frame(res)
     res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
@@ -499,9 +572,9 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     }
 
     return(list(transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam , transformation.parameter=lam, AUC=auc, AUCCI=CIauc, pvalueAUC=pvalauc, J=Jhat, JCI=CIJ, pvalueJ=pvalJ, Sens=Se, CImarginalSens=margcise, Spec=Sp, CImarginalSpec=margcisp, cutoff=cutoff, CIcutoff=CIcutoff,  areaegg=areaegg, arearect=arearect, mxlam=mean(transx), sxlam=sqrt(var(transx)*(length(transx)-1)/length(transx)), mylam=mean(transy), sylam=sqrt(var(transy)*(length(transy)-1)/length(transy)), results=res , rocfun=rocfun))
+    
   }
 }
-
 
 ```
 
@@ -518,6 +591,11 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
     stop("ERROR: Please remove all missing data before running this function.")
   } else if (alpha <= 0 | alpha >= 1) {
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
+  } else if (!((sum(is.na(givenSP)) == 0 & sum(is.na(givenSE) > 0)) |
+               (sum(is.na(givenSE)) == 0 & sum(is.na(givenSP) > 0)))) {
+    stop("ERROR: Exactly one of 'givenSP' and 'givenSE' must be set to NA.")
+  } else if (sum(marker < 0) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     #graphics.off()
@@ -758,8 +836,8 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
 
 
     Spvalues=1-tt;FPRvalues=tt;
-    SEandCIs = matrix( c(Spvalues,FPRvalues, Sehat, CIROCvec1,CIROCvec2), nrow=length(CIROCvec1), ncol=5)
-    colnames(SEandCIs)  <- c("Given Sp","Given FPR", "Sehat","LL of 95%CI","UL of 95%CI")
+    SEandCIs = matrix( c(Spvalues, Sehat, CIROCvec1,CIROCvec2), nrow=length(CIROCvec1), ncol=4)
+    colnames(SEandCIs)  <- c("Given Sp", "Sehat","LL of 95%CI","UL of 95%CI")
     SEandCIs
 
     CIlowSe=CIROCvec1
@@ -861,7 +939,15 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
     CIlowSp=CIROCvec1
     CIuppSp=CIROCvec2
     CIsp=t(rbind(CIlowSp,CIuppSp))
-    return(list(SPandCIs=SPandCIs, SEandCIs=SEandCIs, Sevalues=Sevalues, Sphat=Sphat, CIsp=CIsp, Spvalues=Spvalues, Sphat=Sphat, CIse=CIse ))
+
+    return(list(SPandCIs=formattable(as.matrix(SPandCIs), digits = 4, format = "f"),
+                SEandCIs=formattable(as.matrix(SEandCIs), digits = 4, format = "f"),
+                Sevalues=Sevalues,
+                Sphat=Sphat,
+                CIsp=formattable(as.matrix(CIsp), digits = 4, format = "f"),
+                Spvalues=Spvalues,
+                Sehat=Sehat,
+                CIse=formattable(as.matrix(CIse), digits = 4, format = "f")))
 
 
   }
@@ -885,6 +971,8 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
     stop("ERROR: Controls must be assigned a value of 0; cases must be assigned a value of 1. Both controls and cases should be included in the dataset.")
   } else if (sum(is.na(marker)) > 0 | sum(is.na(D)) > 0) {
     stop("ERROR: Please remove all missing data before running this function.")
+  } else if (sum(marker < 0) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     statusD=D;
@@ -1005,6 +1093,8 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
 
       par(mar = c(5.1, 4.1, 4.1, 2.1))
 
+      par(mfrow=c(1,1))
+
     }
 
 
@@ -1066,6 +1156,8 @@ comparebcAUC <-function (marker1, marker2, D, alpha, plots){
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
   } else if (sum(is.na(marker1)) > 0 | sum(is.na(marker2)) > 0 | sum(is.na(D)) > 0) {
     stop("ERROR: Please remove all missing data before running this function.")
+  } else if ((sum(marker1 < 0) > 0) | (sum(marker2 < 2)) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     erf <- function (x) 2 * pnorm(x * sqrt(2)) - 1
@@ -1543,19 +1635,33 @@ comparebcAUC <-function (marker1, marker2, D, alpha, plots){
 
     res <- data.frame(AUC1 = formattable(AUC1original, digits = 4, format = "f"),
                       AUC2 = formattable(AUC2original, digits = 4, format = "f"),
+                      diff = formattable(AUC2original - AUC1original, digits = 4, format = "f"),
                       p_value_probit = formattable(pval2t, digits = 4, format = "f"),
                       p_value = formattable(pval2tdAUC, digits = 4, format = "f"),
                       ci_ll = formattable(CIdiffdAUC[1], digits = 4, format = "f"),
                       ci_ul = formattable(CIdiffdAUC[2], digits = 4, format = "f"))
 
     rownames(res) <- c("Estimates:")
-    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    colnames(res) <- c("AUC 1", "AUC 2", "Diff", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
     res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
     #return(list(AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_difference= pval2t, CI_difference= pnorm(CIdiff), rocbc1=roc1, rocbc2=roc2))
-    return(list(resultstable=res,AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_probit_difference= pval2t, pvalue_difference= pval2tdAUC, CI_difference= CIdiffdAUC, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,
+                AUCmarker1=AUC1original,
+                AUCmarker2=AUC2original,
+                pvalue_probit_difference= pval2t,
+                pvalue_difference= pval2tdAUC,
+                CI_difference= CIdiffdAUC,
+                roc1=roc1,
+                roc2=roc2,
+                transx1=W1alam,
+                transy1=W1blam,
+                transformation.parameter.1 = lam[1],
+                transx2=W2alam,
+                transy2=W2blam,
+                transformation.parameter.2 = lam[2]))
 
   }
 }
@@ -1575,6 +1681,8 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
   } else if (sum(is.na(marker1)) > 0 | sum(is.na(marker2)) > 0 | sum(is.na(D)) > 0) {
     stop("ERROR: Please remove all missing data before running this function.")
+  } else if ((sum(marker1 < 0) > 0) | (sum(marker2 < 2)) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     erf <- function (x) 2 * pnorm(x * sqrt(2)) - 1
@@ -2098,20 +2206,33 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
 
     res <- data.frame(J1 = formattable(J1original, digits = 4, format = "f"),
                       J2 = formattable(J2original, digits = 4, format = "f"),
+                      diff = formattable(J2original - J1original, digits = 4, format = "f"),
                       p_value_probit = formattable(pval2t, digits = 4, format = "f"),
                       p_value = formattable(pval2tJ, digits = 4, format = "f"),
                       ci_ll = formattable(CIoriginal[1], digits = 4, format = "f"),
                       ci_ul = formattable(CIoriginal[2], digits = 4, format = "f"))
 
     rownames(res) <- c("Estimates:")
-    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    colnames(res) <- c("J 1", "J 2", "Diff", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
     res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
     #return(list(AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_difference= pval2t, CI_difference= pnorm(CIdiff), rocbc1=roc1, rocbc2=roc2))
     #return(list(resultstable=res,J1=J1original,J2=J2original, pvalue_difference= pval2t, CI_difference= CIoriginal, rocbc1=roc1, rocbc2=roc2))
-    return(list(resultstable=res,J1=J1original,J2=J2original, pvalue_probit_difference= pval2t, pvalue_difference= pval2tJ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,
+                J1=J1original,
+                J2=J2original,
+                pvalue_probit_difference= pval2t,
+                pvalue_difference= pval2tJ,
+                CI_difference= CIoriginal,
+                roc1=roc1, roc2=roc2,
+                transx1=W1alam,
+                transy1=W1blam,
+                transformation.parameter.1 = lam[1],
+                transx2=W2alam,
+                transy2=W2blam,
+                transformation.parameter.2 = lam[2]))
 
   }
 
@@ -2135,6 +2256,8 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
     stop("ERROR: Please remove all missing data before running this function.")
   } else if ((!is.numeric(atSpec)) | (length(atSpec) != 1)) {
     stop("ERROR: 'atSpec' must be a single numeric value.")
+  } else if ((sum(marker1 < 0) > 0) | (sum(marker2 < 2)) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     erf <- function (x) 2 * pnorm(x * sqrt(2)) - 1
@@ -2465,8 +2588,8 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
     #############################################################################
     #==================AT A GIVEN T FOR THE ORIGINAL===================
 
-    ROC1or= qnorm(1-pnorm(qnorm(1-t,m1alam,s1alam),m1blam,s1blam));
-    ROC2or= qnorm(1-pnorm(qnorm(1-t,m2alam,s2alam),m2blam,s2blam));
+    ROC1or= (1-pnorm(qnorm(1-t,m1alam,s1alam),m1blam,s1blam));
+    ROC2or= (1-pnorm(qnorm(1-t,m2alam,s2alam),m2blam,s2blam));
 
 
     dm1a =    -(2^(1/2)*exp(-((m1ahat - m1bhat)/s1bhat + (2^(1/2)*s1ahat*erfcinv(2*t))/s1bhat)^2/2))/(2*s1bhat*pi^(1/2))
@@ -2537,13 +2660,14 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
 
     res <- data.frame(Sens1 = formattable(SE1, digits = 4, format = "f"),
                       Sens2 = formattable(SE2, digits = 4, format = "f"),
+                      diff = formattable(SE2 - SE1, digits = 4, format = "f"),
                       p_value_probit = formattable(pval2t, digits = 4, format = "f"),
                       p_value = formattable(pval2tZ, digits = 4, format = "f"),
                       ci_ll = formattable(CIoriginal[1], digits = 4, format = "f"),
                       ci_ul = formattable(CIoriginal[2], digits = 4, format = "f"))
 
     rownames(res) <- c("Estimates:")
-    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    colnames(res) <- c("Sens 1", "Sens 2", "Diff", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
     res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
@@ -2605,7 +2729,20 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
 
 
 
-    return(list(resultstable=res,Sens1=SE1,Sens2=SE2, pvalue_probit_difference= pval2t, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,
+                Sens1=SE1,
+                Sens2=SE2,
+                pvalue_probit_difference= pval2t,
+                pvalue_difference= pval2tZ,
+                CI_difference= CIoriginal,
+                roc1=roc1,
+                roc2=roc2,
+                transx1=W1alam,
+                transy1=W1blam,
+                transformation.parameter.1 = lam[1],
+                transx2=W2alam,
+                transy2=W2blam,
+                transformation.parameter.2 = lam[2]))
 
 
 
@@ -2630,6 +2767,8 @@ comparebcSpec <-function (marker1, marker2, D, atSens, alpha, plots){
     stop("ERROR: Please remove all missing data before running this function.")
   } else if ((!is.numeric(atSens)) | (length(atSens) != 1)) {
     stop("ERROR: 'atSens' must be a single numeric value.")
+  } else if ((sum(marker1 < 0) > 0) | (sum(marker2 < 2)) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     erf <- function (x) 2 * pnorm(x * sqrt(2)) - 1
@@ -2726,18 +2865,32 @@ comparebcSpec <-function (marker1, marker2, D, atSens, alpha, plots){
 
     res <- data.frame(FPR1 = formattable(FPR1, digits = 4, format = "f"),
                       FPR2 = formattable(FPR2, digits = 4, format = "f"),
+                      formattable(FPR2 - FPR1, digits = 4, format = "f"),
                       p_value_probit = formattable(pval2t, digits = 4, format = "f"),
                       p_value = formattable(pval2tZ, digits = 4, format = "f"),
                       ci_ll = formattable(CIoriginal[1], digits = 4, format = "f"),
                       ci_ul = formattable(CIoriginal[2], digits = 4, format = "f"))
     rownames(res) <- c("Estimates:")
-    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    colnames(res) <- c("FPR 1", "FPR 2", "Diff", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
     res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
     #return(list(resultstable=res,Sens1=SE1,Sens2=SE2, pvalue_probit_difference= pval2t, CI_probit_difference= CIZstar, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
-    return(list(resultstable=res,FPR1=FPR1,FPR2=FPR2, pvalue_probit_difference= pval2t, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roct1, roc2=roct2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,
+                FPR1=FPR1,
+                FPR2=FPR2,
+                pvalue_probit_difference= pval2t,
+                pvalue_difference= pval2tZ,
+                CI_difference= CIoriginal,
+                roc1=roct1,
+                roc2=roct2,
+                transx1=W1alam,
+                transy1=W1blam,
+                transformation.parameter.1 = out$transformation.parameter.1,
+                transx2=W2alam,
+                transy2=W2blam,
+                transformation.parameter.2 = out$transformation.parameter.2))
     #return(list(FPR1=FPR1))
 
 
@@ -2746,6 +2899,7 @@ comparebcSpec <-function (marker1, marker2, D, atSens, alpha, plots){
 
 
 ```
+
 
 ## About the rocbc Package
 
@@ -2786,11 +2940,11 @@ The functions of each part:
 
 * **Arguments**  
 
-  + `marker`: It is a vector of length $n$ that contains the biomarker scores of all individuals. 
+  + `marker`: A vector of length $n$ that contains the biomarker scores of all individuals. 
  
-  + ```D```: It is a vector of length $n$ that contains the true disease status of an individual. It is a binary vector containing 0 for the healthy/control individuals and 1 for the diseased individuals.
+  + ```D```: A vector of length n that contains the true disease status of an individual. It is a binary vector containing 0 for the healthy/control individuals and 1 for the diseased individuals.
   
-  + ```plots='on' or 'off'```: When set to 'on', the user gets the histograms of the biomarker for both the healthy and the diseased group before and after the Box-Cox transformation. In addition, all four corresponding qq-plots are provided. When set to 'off', these plots are suppressed.
+  + ```plots='on' or 'off'```: Valid inputs are "on" and "off". When set to "on", the user gets the histograms of the biomarker for both the healthy and the diseased group before and after the Box-Cox transformation. In addition, all four corresponding qq-plots are provided.
   
   + ```printShapiro```: Boolean. When set to TRUE, the results of the Shapiro-Wilk test will be printed to the console. When set to FALSE, the results are suppressed. Default value is FALSE.
   
@@ -2848,11 +3002,13 @@ summary(out)
 
 * **Arguments**  
 
-  + `marker`: It is a vector of length $n$ that contains the biomarker scores of all individuals. 
+  + `marker`: A vector of length n that contains the biomarker scores of all individuals.
  
-  + ```D```: It is a vector of length $n$ that contains the true disease status of an individual. It is a binary vector containing 0 for the healthy/control individuals and 1 for the diseased individuals.
+  + ```D```: A vector of length n that contains the true disease status of an individual. It is a binary vector containing 0 for the healthy/control individuals and 1 for the diseased individuals.
   
-  + ```plots='on' or 'off'```: When set to 'on', it returns a comprehensive figure with the ROC estimate and several point estimates: AUC, Youden index, optimized Youden cutoff, Youden based Sens and Spec along with the corresponding marginal confidence intervals and the joint confidence region of the estimated Sens and Spec. When set to 'off', these plots and corresponding information tidbits are suppressed.
+  + ```alpha```: Nominal level used to calculate the confidence intervals. A common choice is 0.05.
+  
+  + ```plots```: Valid inputs are "on" and "off". When set to "on", the function returns a comprehensive figure with the ROC estimate and several point estimates: AUC, Youden index, optimized Youden cutoff, and the Youden based sensitivty and specificity along with the corresponding marginal confidence intervals and the joint confidence region of the estimated sensitivity and specificity.
   
   + ```printProgress```: Boolean. When set to TRUE, messages describing the progress of the bootstrapping will be printed to the console window. When set to FALSE, these messages are suppressed. Default value is FALSE.
   
@@ -2867,15 +3023,15 @@ summary(out)
   + ```pvalueAUC```: The corresponding p-value for the AUC estimate. This a two-tailed p-value that tests the hypothesis $H_{0}: AUC=0.5$ by employing $Z=\frac{\Phi^{-1}(\hat{AUC})}{\sqrt{var(\Phi^{-1}(\hat{AUC}))}}$ which, under the null hypothesis, is taken to follow a standard normal distribution.
   + ```J```: The maximized Youden index.
   + ```JCI```: The corresponding CI for the maximized Youden index. For this CI, we consider the probit transformation $\hat{J}_{T}=\Phi^{-1}(\hat{J})$ and then back-transform its endpoints to derive a 95\% CI for the Youden index itself (Bantis et al. (2021)). 
-  + ```pvalueJ```: the corresponding two-tailed p-value for the maximized Youden index. This corresponds to $Z=\frac{\hat{J}_{T}}{\sqrt{var(\hat{J}_{T})}}$. The underlying null hypothesis is $H_{0}: J=0$ 
+  + ```pvalueJ```: The corresponding two-tailed p-value for the maximized Youden index. This corresponds to $Z=\frac{\hat{J}_{T}}{\sqrt{var(\hat{J}_{T})}}$. The underlying null hypothesis is $H_{0}: J=0$ 
   + ```Sens```: The sensitivity that corresponds to the Youden based optimized cutoff.
   + ```CImarginalSens```: The marginal (1-$\alpha$)100\% CI for the sensitivity that corresponds to the Youden based optimized cutoff. This is derived by first employing the probit transformation, finding a CI on the real line, and then back-transforming its endpoints to the ROC space.
   + ```Spec```: The specificity that corresponds to the Youden based optimized cutoff.
   + ```CImarginalSpec```: The marginal (1-$\alpha$)100\% CI for the specificity that corresponds to the Youden based optimized cutoff. This is derived by first employing the probit transformation, finding a CI on the real line, and then back-transforming its endpoints to the ROC space.
-  + ```cutoff```: The Youden based optimized cutoff.
+  + ```cutoff```: The Youden-based optimized cutoff.
   + ```CIcutoff```: the (1-$\alpha$)100\% CI for the Youden-based optimized cutoff. This is based on the bootstrap. It involves using the Box-Cox transformation for every bootstrap iteration and then using the inverse Box-Cox transformation to obtain the cutoff on its original scale (Bantis et al. (2019)).
-  + ```areaegg```: the area of the (1-$\alpha$)100\% egg-shaped joint confidence region that refers to the optimized pair of sensitivity and specificity. This takes into account the fact that the estimated sensitivity and specificity are correlated as opposed to the corresponding rectangular area that ignores this.
-  + ```arearect```: the area of the (1-$\alpha$)100\% rectangular joint confidence region that refers to the optimized pair of sensitivity and specificity. This ignores the correlation of the optimized sensitivity and specificity and tends to yield a larger area compared to the one of the egg-shaped region.
+  + ```areaegg```: The area of the (1-$\alpha$)100\% egg-shaped joint confidence region that refers to the optimized pair of sensitivity and specificity. This takes into account the fact that the estimated sensitivity and specificity are correlated as opposed to the corresponding rectangular area that ignores this.
+  + ```arearect```: The area of the (1-$\alpha$)100\% rectangular joint confidence region that refers to the optimized pair of sensitivity and specificity. This ignores the correlation of the optimized sensitivity and specificity and tends to yield a larger area compared to the one of the egg-shaped region.
   + ```mxlam```: The mean of the marker scores of the healthy group after the Box-Cox transformation.
   + ```sxlam```: The standard deviation of the marker scores of the healthy group after the Box-Cox transformation.
   + ```mylam```: The mean of the marker scores of the diseased group after the Box-Cox transformation.
@@ -2931,17 +3087,17 @@ out=rocboxcox(marker=scores,D, 0.05, plots="on", printProgress=FALSE)
 
 * **Arguments**  
 
-  + `marker`: It is a vector of length $n$ that contains the biomarker scores of all individuals. 
+  + `marker`: A vector of length n that contains the biomarker scores of all individuals.
  
-  + ```D```: It is a vector of length $n$ that contains the true disease status of an individual. It is a binary vector containing 0 for the healthy/control individuals and 1 for the diseased individuals.
+  + ```D```: A vector of length n that contains the true disease status of an individual, where 0 denotes a healthy/control individual, and 1 denotes a diseased individual.
   
-  + ```givenSP```: It is a vector of specificity values that the user wants to fix/set, at which the sensitivity is to be estimated. In this case, the 'givenSE' argument needs to be set to NA. 
+  + ```givenSP```: A vector of specificity values that the user wants to fix/set, at which the sensitivity is to be estimated. In this case, the ‘givenSE’ argument needs to be set to NA.
   
-  + ```givenSE```: It is a vector of sensitivity values that the user want to fix/set, at which the specificity is to be estimated. In this case, the 'givenSE' argument needs to be set to NA. 
+  + ```givenSE```: A vector of sensitivity values that the user want to fix/set, at which the specificity is to be estimated. In this case, the ‘givenSP’ argument needs to be set to NA.
   
-  + ```alpha```: Nominal level used to calculate the confidence intervals. A common choice is 0.05. 
+  + ```alpha```: Nominal level used to calculate the confidence intervals. A common choice is 0.05.
   
-  + ```plots='on' or 'off'```: When set to 'on', it returns the Box-Cox based ROC plot along with pointwise 95\% confidence intervals for the full spectrum of FPRs. A second plot is also provided that visualizes the confidence intervals at the given sensitivities or specificities. When set to 'off', both plots are suppressed.
+  + ```plots```: Valid inputs are "on" and "off". When set to "on", it returns both (1) the Box-Cox based ROC plot along with pointwise 95% confidence intervals for the full spectrum of FPRs and (2) a second plot that visualizes the confidence intervals at the given sensitivities or specificities.
 
 
 * **Value**  
@@ -2949,8 +3105,8 @@ out=rocboxcox(marker=scores,D, 0.05, plots="on", printProgress=FALSE)
 
   + ```SPandCIs```: The specificity values and the CIs around them.
   + ```SEandCIs```: The specificity values and the CIs around them.
-  + ```SEvalues```: The sensitivity values provided by the user at which the specificity was calculated. If the user did not provide any sensitivity values, this argument is set to NA.
-  + ```SPvalues```: tTe specificity values provided by the user at which the sensitivity was calculated. If the user did not provide any specificity values, this argument is set to NA.
+  + ```SEvalues```: The sensitivity values provided by the user at which the specificity was calculated. If the user did not provide any sensitivity values, this argument shoulb be set to NA.
+  + ```SPvalues```: The specificity values provided by the user at which the sensitivity was calculated. If the user did not provide any specificity values, this argument should be set to NA.
   
 
 
@@ -2985,31 +3141,31 @@ out=rocboxcoxCI(marker=scores ,D, givenSP=givenSP, givenSE=NA, alpha=0.05, plots
 
 * **Arguments**  
 
-  + `marker1`: It is a vector of length $n$ that contains the biomarker scores of all individuals for the first marker. 
-  + `marker2`: It is a vector of length $n$ that contains the biomarker scores of all individuals for the second marker. 
+  + `marker1`: A vector of length n that contains the biomarker scores of all individuals for the first marker.
+  + `marker2`: A vector of length n that contains the biomarker scores of all individuals for the second marker.
  
-  + ```D```: It is a binary vector of length $n$ that contains the true disease status of an individual. It is a binary vector containing 0 for the healthy/control individuals and 1 for the diseased individuals.
+  + ```D```: A vector of length n that contains the true disease status of an individual. It is a binary vector containing 0 for the healthy/control individuals and 1 for the diseased individuals.
   
   + ```alpha```: Nominal level used to calculate the confidence intervals. A common choice is 0.05. 
   
-  + ```plots='on' or 'off'```: When set to 'on', it returns the Box-Cox based ROC along with informative information about the two AUCs in the legend of the plot. When set to 'off', these plots are suppressed.
+  + ```plots```: Valid inputs are "on" and "off". When set to "on" it returns the Box-Cox based ROC along with informative information about the two AUCs in the legend of the plot.
 
 * **Value**  
 
-
-  + ```AUCmarker1```: the AUC of the first marker
-  + ```AUCmarker2```: the AUC of the second marker
-  + ```pvalue_probit_difference```: the p-value for the comparison of the AUCs. It employs the probit transformation that has greater power then when not using it (as opposed to the p-value provided in the 'pvalue difference' output argument provided later on). It is based on $Z^*=\frac{\Phi^{-1}\left(\hat{AUC}_{1}\right)-\Phi^{-1}\left(\hat{AUC}_{2}\right)}{\sqrt{Var\left(\Phi^{-1}\left(\hat{AUC}_{1}\right)\right)+Var\left(\Phi^{-1}\left(\hat{AUC}_{2}\right)\right)-2Cov\left(\Phi^{-1}\left(\hat{AUC}_{1}\right)),\Phi^{-1}\left(\hat{AUC}_{2}\right)\right)}}$.
-  + ```CI_probit_difference```: the confidence interval for the difference of the probits of the AUCs. (corresponds to the same strategy as the 'pvalue_probit_difference'). It is also based on $Z^*$ given above.
-  + ```pvalue_difference```: the p-value for the comparisons of the AUC (without the probit transformation). Simulations have shown that this is inferior to the 'pvalue probit difference'. This is based on $Z=\frac{\hat{AUC}_{1}-\hat{AUC}_{2}}{\sqrt{Var\left(\hat{AUC}_{1}\right)+Var\left(\hat{AUC}_{2}\right)-2Cov\left(\hat{AUC}_{1},\hat{AUC}_{2}\right)}}$.
-  + ```CI_difference```: the confidence interval for the difference of the AUCs. It is based on $Z$ given above.
-  + ```roc1```: a function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.
-  + ```roc2```: a function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.
-  + ```transx1```: the Box-Cox transformed scores for the first marker and the healthy group.
-  + ```transy1```: the Box-Cox transformed scores for the first marker and the diseased group.
-  + ```transx2```: the Box-Cox transformed scores for the second marker and the healthy group.
-  + ```transy2```: the Box-Cox transformed scores for the second marker and the diseased group.
-  
+  + ```resultstable```: A summary table of the comparison that contains the AUC of each marker, the p-value of the difference using the probit transformation, the p-value of the difference, and the confidence interval of the difference.
+  + ```AUCmarker1```: The AUC of the first marker.
+  + ```AUCmarker2```: The AUC of the second marker.
+  + ```pvalue_probit_difference```: The p-value for the comparison of the AUCs. It employs the probit transformation that has greater power then when not using it (as opposed to the p-value provided in the 'pvalue difference' output argument provided later on). It is based on $Z^*=\frac{\Phi^{-1}\left(\hat{AUC}_{1}\right)-\Phi^{-1}\left(\hat{AUC}_{2}\right)}{\sqrt{Var\left(\Phi^{-1}\left(\hat{AUC}_{1}\right)\right)+Var\left(\Phi^{-1}\left(\hat{AUC}_{2}\right)\right)-2Cov\left(\Phi^{-1}\left(\hat{AUC}_{1}\right)),\Phi^{-1}\left(\hat{AUC}_{2}\right)\right)}}$.
+  + ```pvalue_difference```: The p-value for the comparisons of the AUC (without the probit transformation). Simulations have shown that this is inferior to the 'pvalue probit difference'. This is based on $Z=\frac{\hat{AUC}_{1}-\hat{AUC}_{2}}{\sqrt{Var\left(\hat{AUC}_{1}\right)+Var\left(\hat{AUC}_{2}\right)-2Cov\left(\hat{AUC}_{1},\hat{AUC}_{2}\right)}}$.
+  + ```CI_difference```: The confidence interval for the difference of the AUCs. It is based on $Z$ given above.
+  + ```roc1```: A function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.
+  + ```roc2```: A function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.
+  + ```transx1```: The Box-Cox transformed scores for the first marker and the healthy group.
+  + ```transy1```: The Box-Cox transformed scores for the first marker and the diseased group.
+  + ```transformation.parameter.1```: The estimated Box-Cox transformation parameter (lambda) for marker 1.
+  + ```transx2```: The Box-Cox transformed scores for the second marker and the healthy group.
+  + ```transy2```: The Box-Cox transformed scores for the second marker and the diseased group.
+  + ```transformation.parameter.2```: The estimated Box-Cox transformation parameter (lambda) for marker 2.
   
   
 
@@ -3078,30 +3234,31 @@ out=comparebcAUC(marker1, marker2, D, alpha=0.05,  plots="on")
 
 * **Arguments**  
 
-  + `marker1`: It is a vector of length $n$ that contains the biomarker scores of all individuals for the first marker. 
-  + `marker2`: It is a vector of length $n$ that contains the biomarker scores of all individuals for the second marker. 
+  + `marker1`: A vector of length n that contains the biomarker scores of all individuals for the first marker.
+  + `marker2`: A vector of length n that contains the biomarker scores of all individuals for the second marker.
  
-  + ```D```: It is a vector of length $n$ that contains the true disease status of an individual. It is a binary vector containing 0 for the healthy/control individuals and 1 for the diseased individuals.
+  + ```D```: A vector of length n that contains the true disease status of an individual, where 0 denotes a healthy/control individual, and 1 denotes a diseased individual.
   
-  + ```alpha```: Nominal level based on which the confidence intervals are going to be calculated. A common choice is 0.05. 
+  + ```alpha```: Nominal level used to calculate the confidence intervals. A common choice is 0.05. 
   
-  + ```plots='on' or 'off'```: When set to 'on', it returns the Box-Cox based ROC along with informative information about the two AUCs in the legend of the plot.
+  + ```plots```: Valid inputs are "on" and "off". When set to "on" it returns the Box-Cox based ROC along with informative information about the two AUCs in the legend of the plot.
 
 * **Value**  
 
-
-  + ```J1```: The maximized Youden index (J) of the first marker.
-  + ```J2```: The maximized Youden index (J) of the second marker.
+  + ```resultstable```: A summary table of the comparison that contains the maximized Youden Index of each marker, the p-value of the difference using the probit transformation, the p-value of the difference, and the confidence interval of the difference.
+  + ```J1```: The maximized Youden Index (J) of the first marker.
+  + ```J2```: The maximized Youden Index (J) of the second marker.
   + ```pvalue_probit_difference```: The p-value for the comparison of the Js. It employs the probit transformation that has greater power then when not using it (as opposed to the p-value provided in the 'pvalue difference' output argument provided later on). It is based on $Z^{*}=\frac{\hat{J}_{T2}-\hat{J}_{T1}}{\sqrt{Var(\hat{J}_{T1})+Var(\hat{J}_{T2})-2Cov(\hat{J}_{T1},\hat{J}_{T2})}}$ where $\hat{J}_{Ti}=\Phi^{-1}(\hat{J}_{i})$, $i=1,2$.
-  + ```CI_probit_difference```: The confidence interval for the difference of the transformed Js. (Corresponds to the same strategy as the 'pvalue_trans_difference' and is based on $Z^*$ mentioned above).
   + ```pvalue_difference```: The p-value for the comparisons of the J (without the probit transformation). Simulations have shown that this is inferior to the 'pvalue probit difference'. This is based on $Z=\frac{\hat{J}_{2}-\hat{J}_{1}}{\sqrt{Var(\hat{J}_{1})+Var(\hat{J}_{2})-2Cov(\hat{J}_{1},\hat{J}_{T})}}$.
   + ```CI_difference```: The confidence interval for the difference of the Js. This is based on $Z$ mentioned right above. 
   + ```roc1```: A function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.
   + ```roc2```: A function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.
   + ```transx1```: The Box-Cox transformed scores for the first marker and the healthy group.
   + ```transy1```: The Box-Cox transformed scores for the first marker and the diseased group.
+  + ```transformation.parameter.1```: The estimated Box-Cox transformation parameter (lambda) for marker 1.
   + ```transx2```: The Box-Cox transformed scores for the second marker and the healthy group.
   + ```transy2```: The Box-Cox transformed scores for the second marker and the diseased group.
+  + ```transformation.parameter.2```: The estimated Box-Cox transformation parameter (lambda) for marker 2.
   
   
   
@@ -3143,33 +3300,33 @@ out=comparebcJ(marker1, marker2, D, alpha=0.05,  plots="on")
 
 * **Arguments**  
 
-  + `marker1`: It is a vector of length $n$ that contains the biomarker scores of all individuals for the first marker. 
-  + `marker2`: It is a vector of length $n$ that contains the biomarker scores of all individuals for the second marker. 
+  + `marker1`: A vector of length n that contains the biomarker scores of all individuals for the first marker.
+  + `marker2`: A vector of length n that contains the biomarker scores of all individuals for the second marker.
  
-  + ```D```: It is a vector of length $n$ that contains the true disease status of an individual. It is a binary vector containing 0 for the healthy/control individuals and 1 for the diseased individuals.
+  + ```D```: A vector of length n that contains the true disease status of an individual, where 0 denotes a healthy/control individual, and 1 denotes a diseased individual.
   
-  + ```alpha```: Nominal level used to calculate the confidence intervals. A common choice is 0.05. 
+  + ```alpha```: Nominal level used to calculate the confidence intervals. A common choice is 0.05.
   
-  + ```atSpec```: The value of specificity at which the comparison of sensitivities will take place (a single value / scalar).
+  + ```atSpec```: The value of specificity at which the comparison of sensitivities will take place.
   
-  + ```plots='on' or 'off'```: When set to 'on', it returns the Box-Cox based ROC along with informative information about the two AUCs in the legend of the plot. When set to 'off', these plots are suppressed.
+  + ```plots```: Valid inputs are "on" and "off". When set to "on" it returns the Box-Cox based ROC along with informative information about the two AUCs in the legend of the plot.
 
 * **Value**  
 
-
+  + ```resultstable```: A summary table of the comparison that contains the sensitivity of each marker at the given specificity, the p-value of the difference using the probit transformation, the p-value of the difference, and the confidence interval of the difference.
   + ```Sens1```: The sensitivity at the selected specificity for the first marker.
   + ```Sens2```: The sensitivity at the selected specificity for the second marker.
   + ```pvalue_probit_difference```: The p-value for the comparison of the sensitivities. It employs the probit transformation that has greater power then when not using it (as opposed to the p-value provided in the 'pvalue_difference' output argument provided later on).
-  + ```CI_probit_difference```: The confidence interval for the difference of the probits of the sensitivities. (corresponds to the same strategy as the 'pvalue_probit_difference').
   + ```pvalue_difference```: The p-value for the comparisons of the sensitivities (without the probit transformation). Simulations have shown that this is inferior to the 'pvalue_probit_difference'.
   + ```CI_difference```: The confidence interval for the difference of the sensitivities. 
   + ```roc1```: A function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.
   + ```roc2```: A function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.
   + ```transx1```: The Box-Cox transformed scores for the first marker and the healthy group.
   + ```transy1```: The Box-Cox transformed scores for the first marker and the diseased group.
+  + ```transformation.parameter.1```: The estimated Box-Cox transformation parameter (lambda) for marker 1.
   + ```transx2```: The Box-Cox transformed scores for the second marker and the healthy group.
   + ```transy2```: The Box-Cox transformed scores for the second marker and the diseased group.
-  
+  + ```transformation.parameter.2```: The estimated Box-Cox transformation parameter (lambda) for marker 2.
   
   
 
@@ -3210,16 +3367,16 @@ summary(out)
 
 * **Arguments**  
 
-  + `marker1`: It is a vector of length $n$ that contains the biomarker scores of all individuals for the first marker. 
-  + `marker2`: It is a vector of length $n$ that contains the biomarker scores of all individuals for the second marker. 
+  + `marker1`: A vector of length n that contains the biomarker scores of all individuals for the first marker. 
+  + `marker2`: A vector of length n that contains the biomarker scores of all individuals for the second marker. 
  
-  + ```D```: It is a vector of length $n$ that contains the true disease status of an individual. It is a binary vector containing 0 for the healthy/control individuals and 1 for the diseased individuals.
+  + ```D```: A vector of length n that contains the true disease status of an individual, where 0 denotes a healthy/control individual, and 1 denotes a diseased individual.
   
-  + ```alpha```: Nominal level used to calculate the confidence intervals. A common choice is 0.05. 
+  + ```alpha```: Nominal level used to calculate the confidence intervals. A common choice is 0.05.
   
-  + ```atSens```: The value of sensitivity at which the comparison of specificities will take place (a single value / scalar).
+  + ```atSens```: The value of sensitivity at which the comparison of specificities will take place.
   
-  + ```plots='on' or 'off'```: When set to 'on' it returns the Box-Cox based ROC along with informative information about the two AUCs in the legend of the plot. When set to 'off', this information is suppressed.
+  + ```plots```: Valid inputs are "on" and "off". When set to "on" it returns the Box-Cox based ROC along with informative information about the two AUCs in the legend of the plot.
 
 * **Value**  
 
@@ -3227,19 +3384,19 @@ summary(out)
   + ```Spec1```: The specificity at the selected sensitivity for the first marker.
   + ```Spec2```: The specificity at the selected sensitivity for the second marker.
   + ```pvalue_probit_difference```: The p-value for the comparison of the specificities. It employs the probit transformation that has greater power then when not using it (as opposed to the p-value provided in the 'pvalue_difference' output argument provided later on).
-  + ```CI_probit_difference```: The confidence interval for the difference of the probits of the specificities (corresponds to the same strategy as the 'pvalue_probit_difference').
   + ```pvalue_difference```: The p-value for the comparison of the specificities (without the probit transformation). Simulations have shown that this is inferior to the 'pvalue_probit_difference'.
   + ```CI_difference```: The confidence interval for the difference of the specificities. 
   + ```roc1```: A function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.
   + ```roc2```: A function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.
   + ```transx1```: The Box-Cox transformed scores for the first marker and the healthy group.
   + ```transy1```: The Box-Cox transformed scores for the first marker and the diseased group.
+  + ```transformation.parameter.1```: The estimated Box-Cox transformation parameter (lambda) for marker 1.
   + ```transx2```: The Box-Cox transformed scores for the second marker and the healthy group.
   + ```transy2```: The Box-Cox transformed scores for the second marker and the diseased group.
+  + ```transformation.parameter.2```: The estimated Box-Cox transformation parameter (lambda) for marker 2.
   
   
   
-
 
 * **Example: **  
 
@@ -3255,8 +3412,3 @@ summary(out)
 
 
 --- 
-
-
-
-
-The package is available at <https://www.leobantis.net> and soon to be submitted to CRAN.

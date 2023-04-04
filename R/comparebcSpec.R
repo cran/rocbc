@@ -10,6 +10,8 @@ comparebcSpec <-function (marker1, marker2, D, atSens, alpha, plots){
     stop("ERROR: Please remove all missing data before running this function.")
   } else if ((!is.numeric(atSens)) | (length(atSens) != 1)) {
     stop("ERROR: 'atSens' must be a single numeric value.")
+  } else if ((sum(marker1 < 0) > 0) | (sum(marker2 < 2)) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     erf <- function (x) 2 * pnorm(x * sqrt(2)) - 1
@@ -106,18 +108,32 @@ comparebcSpec <-function (marker1, marker2, D, atSens, alpha, plots){
 
     res <- data.frame(FPR1 = formattable(FPR1, digits = 4, format = "f"),
                       FPR2 = formattable(FPR2, digits = 4, format = "f"),
+                      formattable(FPR2 - FPR1, digits = 4, format = "f"),
                       p_value_probit = formattable(pval2t, digits = 4, format = "f"),
                       p_value = formattable(pval2tZ, digits = 4, format = "f"),
                       ci_ll = formattable(CIoriginal[1], digits = 4, format = "f"),
                       ci_ul = formattable(CIoriginal[2], digits = 4, format = "f"))
     rownames(res) <- c("Estimates:")
-    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    colnames(res) <- c("FPR 1", "FPR 2", "Diff", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
     res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
     #return(list(resultstable=res,Sens1=SE1,Sens2=SE2, pvalue_probit_difference= pval2t, CI_probit_difference= CIZstar, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
-    return(list(resultstable=res,FPR1=FPR1,FPR2=FPR2, pvalue_probit_difference= pval2t, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roct1, roc2=roct2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,
+                FPR1=FPR1,
+                FPR2=FPR2,
+                pvalue_probit_difference= pval2t,
+                pvalue_difference= pval2tZ,
+                CI_difference= CIoriginal,
+                roc1=roct1,
+                roc2=roct2,
+                transx1=W1alam,
+                transy1=W1blam,
+                transformation.parameter.1 = out$transformation.parameter.1,
+                transx2=W2alam,
+                transy2=W2blam,
+                transformation.parameter.2 = out$transformation.parameter.2))
     #return(list(FPR1=FPR1))
 
 

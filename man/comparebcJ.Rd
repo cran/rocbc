@@ -22,8 +22,9 @@ comparebcJ(marker1, marker2, D, alpha,  plots)
 }
 
 \value{
-  \item{J1}{Description of 'comp1'}
-  \item{J2}{Description of 'comp2'}
+  \item{resultstable}{A summary table of the comparison that contains the maximized Youden Index of each marker, the p-value of the difference using the probit transformation, the p-value of the difference, and the confidence interval of the difference.}
+  \item{J1}{The maximized Youden Index of the first marker.}
+  \item{J2}{The maximized Youden Index of the second marker.}
   \item{pvalue_probit_difference}{The p-value for the comparison of the Js. It employs the probit transformation that has greater power than when not using it (as in pvalue_difference).}
   \item{pvalue_difference}{The p-value for the comparisons of the Js (without the probit transformation). Simulations have shown that this is inferior to the ‘pvalue_probit_difference’.}
   \item{CI_difference}{The confidence interval for the difference of the Js.}
@@ -31,8 +32,10 @@ comparebcJ(marker1, marker2, D, alpha,  plots)
   \item{roc2}{A function that refers to the ROC of the first marker. It allows the user to feed in FPR values and the corresponding TPR values.}
   \item{transx1}{The Box-Cox transformed scores for the first marker and the healthy group.}
   \item{transy1}{The Box-Cox transformed scores for the first marker and the diseased group.}
+  \item{transformation.parameter.1}{The estimated Box-Cox transformation parameter (lambda) for marker 1.}
   \item{transx2}{The Box-Cox transformed scores for the second marker and the healthy group.}
   \item{transy2}{The Box-Cox transformed scores for the second marker and the diseased group.}
+  \item{transformation.parameter.2}{The estimated Box-Cox transformation parameter (lambda) for marker 2.}
 }
 
 \references{

@@ -8,6 +8,8 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
   } else if (sum(is.na(marker1)) > 0 | sum(is.na(marker2)) > 0 | sum(is.na(D)) > 0) {
     stop("ERROR: Please remove all missing data before running this function.")
+  } else if ((sum(marker1 < 0) > 0) | (sum(marker2 < 2)) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     erf <- function (x) 2 * pnorm(x * sqrt(2)) - 1
@@ -531,20 +533,33 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
 
     res <- data.frame(J1 = formattable(J1original, digits = 4, format = "f"),
                       J2 = formattable(J2original, digits = 4, format = "f"),
+                      diff = formattable(J2original - J1original, digits = 4, format = "f"),
                       p_value_probit = formattable(pval2t, digits = 4, format = "f"),
                       p_value = formattable(pval2tJ, digits = 4, format = "f"),
                       ci_ll = formattable(CIoriginal[1], digits = 4, format = "f"),
                       ci_ul = formattable(CIoriginal[2], digits = 4, format = "f"))
 
     rownames(res) <- c("Estimates:")
-    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    colnames(res) <- c("J 1", "J 2", "Diff", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
     res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
     #return(list(AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_difference= pval2t, CI_difference= pnorm(CIdiff), rocbc1=roc1, rocbc2=roc2))
     #return(list(resultstable=res,J1=J1original,J2=J2original, pvalue_difference= pval2t, CI_difference= CIoriginal, rocbc1=roc1, rocbc2=roc2))
-    return(list(resultstable=res,J1=J1original,J2=J2original, pvalue_probit_difference= pval2t, pvalue_difference= pval2tJ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,
+                J1=J1original,
+                J2=J2original,
+                pvalue_probit_difference= pval2t,
+                pvalue_difference= pval2tJ,
+                CI_difference= CIoriginal,
+                roc1=roc1, roc2=roc2,
+                transx1=W1alam,
+                transy1=W1blam,
+                transformation.parameter.1 = lam[1],
+                transx2=W2alam,
+                transy2=W2blam,
+                transformation.parameter.2 = lam[2]))
 
   }
 

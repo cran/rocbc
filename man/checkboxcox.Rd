@@ -14,21 +14,21 @@ checkboxcox(marker, D, plots, printShapiro = FALSE)
 }
 
 \arguments{
-  \item{marker}{It is a vector of length n that contains the biomarker scores of all individuals.}
-  \item{D}{It is a vector of length n that contains the true disease status of an individual. It is a binary vector containing 0 for the healthy/control individuals and 1 for the diseased individuals.}
+  \item{marker}{A vector of length n that contains the biomarker scores of all individuals.}
+  \item{D}{A vector of length n that contains the true disease status of an individual. It is a binary vector containing 0 for the healthy/control individuals and 1 for the diseased individuals.}
   \item{plots}{Valid inputs are "on" and "off". When set to "on", the user gets the histograms of the biomarker for both the healthy and the diseased group before and after the Box-Cox transformation. In addition, all four corresponding qq-plots are provided.}
   \item{printShapiro}{Boolean. When set to TRUE, the results of the Shapiro-Wilk test will be printed to the console. When set to FALSE, the results are suppressed. Default value is FALSE.}
 }
 
 \value{
-  \item{res_shapiro}{A results table that contains the results of four shapiro wilk tests for normality testing. Two of them refer to normality testing of the healthy and the diseased group before the Box-Cox transformation and the remaining two refer to the Box-Cox transformed biomarkers scores for the healthy and the diseased group. This testing involves four p.values. In addition, if the plots are set to ‘on’ then the user gets the histograms of the biomarker for both the healthy and the diseased group before and after the Box-Cox transformation. In addition, all four corresponding qq-plots are provided. Finally, an plot with the empirical ROC curve overplotted with the Box-Cox based ROC curve for visual comparison purposes.}
+  \item{res_shapiro}{A results table that contains the results of four Shapiro-Wilk tests for normality testing. Two of these refer to normality testing of the healthy and the diseased groups before the Box-Cox transformation, and the remaining two refer to the Box-Cox transformed biomarkers scores for the healthy and the diseased groups. Thus, this testing process produces four p-values. In addition, if the plots are set to 'on', then the output provides (1) the histograms of the biomarker for both the healthy and the diseased groups before and after the Box-Cox transformation, (2) all four corresponding qq-plots, and (3) a plot with the empirical ROC curve overplotted with the Box-Cox based ROC curve for visual comparison purposes.}
   \item{transformation.parameter}{The single transformation parameter, lambda, that is applied for both groups simultaneously.}
   \item{transx}{The Box-Cox transformed scores for the healthy.}
   \item{transy}{The Box-Cox transformed scores for the diseased.}
-  \item{pval_x1}{The p-value of the Shapiro Wilk test of normality for the healthy group (before the Box-Cox transformation).}
-  \item{pval_x2}{The p-value of the Shapiro Wilk test of normality for the diseased group (before the Box-Cox transformation).}
-  \item{pval_x1trans}{The p-value of the Shapiro Wilk test of normality for the healthy group (after the Box-Cox transformation).}
-  \item{pval_x2trans}{The p-value of the Shapiro Wilk test of normality for the diseased group (after the Box-Cox transformation).}
+  \item{pval_x}{The p-value of the Shapiro Wilk test of normality for the healthy group (before the Box-Cox transformation).}
+  \item{pval_y}{The p-value of the Shapiro Wilk test of normality for the diseased group (before the Box-Cox transformation).}
+  \item{pval_transx}{The p-value of the Shapiro Wilk test of normality for the healthy group (after the Box-Cox transformation).}
+  \item{pval_transy}{The p-value of the Shapiro Wilk test of normality for the diseased group (after the Box-Cox transformation).}
 }
 
 \references{

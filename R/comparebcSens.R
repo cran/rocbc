@@ -10,6 +10,8 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
     stop("ERROR: Please remove all missing data before running this function.")
   } else if ((!is.numeric(atSpec)) | (length(atSpec) != 1)) {
     stop("ERROR: 'atSpec' must be a single numeric value.")
+  } else if ((sum(marker1 < 0) > 0) | (sum(marker2 < 2)) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     erf <- function (x) 2 * pnorm(x * sqrt(2)) - 1
@@ -340,8 +342,8 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
     #############################################################################
     #==================AT A GIVEN T FOR THE ORIGINAL===================
 
-    ROC1or= qnorm(1-pnorm(qnorm(1-t,m1alam,s1alam),m1blam,s1blam));
-    ROC2or= qnorm(1-pnorm(qnorm(1-t,m2alam,s2alam),m2blam,s2blam));
+    ROC1or= (1-pnorm(qnorm(1-t,m1alam,s1alam),m1blam,s1blam));
+    ROC2or= (1-pnorm(qnorm(1-t,m2alam,s2alam),m2blam,s2blam));
 
 
     dm1a =    -(2^(1/2)*exp(-((m1ahat - m1bhat)/s1bhat + (2^(1/2)*s1ahat*erfcinv(2*t))/s1bhat)^2/2))/(2*s1bhat*pi^(1/2))
@@ -412,13 +414,14 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
 
     res <- data.frame(Sens1 = formattable(SE1, digits = 4, format = "f"),
                       Sens2 = formattable(SE2, digits = 4, format = "f"),
+                      diff = formattable(SE2 - SE1, digits = 4, format = "f"),
                       p_value_probit = formattable(pval2t, digits = 4, format = "f"),
                       p_value = formattable(pval2tZ, digits = 4, format = "f"),
                       ci_ll = formattable(CIoriginal[1], digits = 4, format = "f"),
                       ci_ul = formattable(CIoriginal[2], digits = 4, format = "f"))
 
     rownames(res) <- c("Estimates:")
-    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    colnames(res) <- c("Sens 1", "Sens 2", "Diff", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
     res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
@@ -480,7 +483,20 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
 
 
 
-    return(list(resultstable=res,Sens1=SE1,Sens2=SE2, pvalue_probit_difference= pval2t, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,
+                Sens1=SE1,
+                Sens2=SE2,
+                pvalue_probit_difference= pval2t,
+                pvalue_difference= pval2tZ,
+                CI_difference= CIoriginal,
+                roc1=roc1,
+                roc2=roc2,
+                transx1=W1alam,
+                transy1=W1blam,
+                transformation.parameter.1 = lam[1],
+                transx2=W2alam,
+                transy2=W2blam,
+                transformation.parameter.2 = lam[2]))
 
 
 

@@ -36,11 +36,12 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
   } else if (min(marker<= 0)) {
     stop("ERROR: All marker scores need to be positive")
+  } else if (sum(marker < 0) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     x=marker[D==0]
     y=marker[D==1]
-
 
     if (plots!="on"){plots="off"}
     n1=length(x)
@@ -68,10 +69,6 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
       return(out)
     }
 
-
-
-
-
     boxcoxleo<-function(x,y){
       init=1;
       logL<-function(h){
@@ -91,7 +88,6 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
       return(list(transformation.parameter=lam,transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam ))
     }
 
-
     boxcoxleo2<-function(x,y){
       init=1;
       logL<-function(h){
@@ -104,11 +100,67 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
       transx=((x^lam)-1)/lam
       transy=((y^lam)-1)/lam
 
-
-
       return(list(transformation.parameter=lam,transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam ))
     }
 
+    COVlam <-function (x,y){
+
+      #%Accepts X<Y Yields as an output the Variance Covariance matrix
+      #%of the mh, sh, md, sd, and lam, (with this order) where lam is the estimated boxcox
+      #%parameter Thus, the output will be a 5x5 matrix
+
+      #%---FOR TWO POPULATIONS:
+
+      n=length(x); #original scores
+      m=length(y);
+
+      #  %mh-->g(1)
+      #  %sh-->g(2)
+      #  %md-->g(3)
+      #  %sd-->g(4)
+      #  %lam-->g(5)
+      #  %  logL=@(g) -n*log(sh)-1/(2*sh^2)*sum((xlam-mh)^2)+(lam-1)*sum(log(x)) -
+      #  %             m*log(sd)-1/(2*sd^2)*sum((ylam-md)^2)+(lam-1)*sum(log(y))
+
+      outt=boxcoxleo(x,y); #the original scores
+      transx=outt$transx
+      transy=outt$transy
+      lam=outt$transformation.parameter
+
+
+      mh=mean(transx); xlam=transx;
+      md=mean(transy); ylam=transy;
+      sh=sqrt(1/(length(transx))*sum((transx-mean(transx))^2));
+      sd=sqrt(1/(length(transy))*sum((transy-mean(transy))^2));
+
+
+      I=zeros(5,5);
+      I[1,1]=n/sh^2;
+      I[2,2]=-(n/sh^2-3/sh^4*sum((xlam-mh)^2));
+      I[3,3]=m/sd^2;
+      I[4,4]=-(m/sd^2-3/sd^4*sum((ylam-md)^2));
+
+      kk=  sum(((mh - (x^lam - 1)/lam)*((2*(x^lam - 1))/lam^3 - (2*x^lam*log(x))/lam^2 + (x^lam*log(x)^2)/lam))/sh^2) +  - sum(((y^lam - 1)/lam^2 - (y^lam*log(y))/lam)^2/sd^2) +   - sum(((x^lam - 1)/lam^2 - (x^lam*log(x))/lam)^2/sh^2) +   + sum(((md - (y^lam - 1)/lam)*((2*(y^lam - 1))/lam^3 - (2*y^lam*log(y))/lam^2 + (y^lam*log(y)^2)/lam))/sd^2);
+      I[5,5]=-kk ;
+
+      I[1,5]=sum(((2*(x^lam - 1))/lam^2 - (2*x^lam*log(x))/lam)/(2*sh^2));
+      I[2,5]=-sum((2*((x^lam - 1)/lam^2 - (x^lam*log(x))/lam)*(mh - (x^lam - 1)/lam))/sh^3);
+      I[3,5]=-sum(-((2*(y^lam - 1))/lam^2 - (2*y^lam*log(y))/lam)/(2*sd^2));
+
+
+      I[4,5]=-sum((2*((y^lam - 1)/lam^2 - (y^lam*log(y))/lam)*(md - (y^lam - 1)/lam))/sd^3);
+
+      I[5,1]=I[1,5];
+      I[5,2]=I[2,5];
+      I[5,3]=I[3,5];
+      I[5,4]=I[4,5];
+
+
+      S= inv(I); #%that's better
+
+      return(list(out=S))
+
+    }
 
     cc=boxcoxleo(x,y)
 
@@ -161,17 +213,34 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     #            s1hat->s1hat
     #            s2hat->s2hat
 
+    #########################################
 
-    vardeltasp= (-((s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + 1)/s1hat)^2*(s1hat^2/n1)+((m1hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s1hat^2 - ((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat)^2*(s1hat^2/(2*n1-2))+((s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat*(s1hat^2 - s2hat^2)))^2*(s2hat^2/n2)+(-((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat)^2*(s2hat^2/(2*n2-2))
+    derde =c( (s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s2hat*(s1hat^2 - s2hat^2)), ((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat, -((s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - 1)/s2hat, ((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat - (m2hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s2hat^2);
+    derdp =c( -((s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + 1)/s1hat, (m1hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s1hat^2 - ((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat, (s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat*(s1hat^2 - s2hat^2)), -((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat);
 
-    #delta method for var of delta_se
-    vardeltase= ((s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s2hat*(s1hat^2 - s2hat^2)))^2*(s1hat^2/n1)+(((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat)^2*(s1hat^2/(2*n1-2))+(-((s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - 1)/s2hat)^2*(s2hat^2/n2)+(((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat - (m2hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s2hat^2)^2*(s2hat^2/(2*n2-2))
+    outt=COVlam(xor,yor);
 
-    #delta method for delta_e, delta_p covariance
-    covdedp= ((s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s2hat*(s1hat^2 - s2hat^2)))*(-((s2hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + 1)/s1hat)*(s1hat^2/n1)+(((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat)*((m1hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s1hat^2 - ((s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - 2*m2hat*s1hat + (s1hat*s2hat*(2*s1hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s1hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - (2*s1hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat)*(s1hat^2/(2*n1-2))+(-((s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) - 1)/s2hat)*((s1hat^2 + (s1hat*s2hat*(2*m1hat - 2*m2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat*(s1hat^2 - s2hat^2)))*(s2hat^2/n2)+(((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s2hat - (m2hat + (m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2))/(s1hat^2 - s2hat^2))/s2hat^2)*(-((2*m1hat*s2hat + s1hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2) - (s1hat*s2hat*(2*s2hat*log(s1hat^2/s2hat^2) + (2*(s1hat^2 - s2hat^2))/s2hat))/(2*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2) + (2*s2hat*(m1hat*s2hat^2 - m2hat*s1hat^2 + s1hat*s2hat*(log(s1hat^2/s2hat^2)*(s1hat^2 - s2hat^2) + (m1hat - m2hat)^2)^(1/2)))/(s1hat^2 - s2hat^2)^2)/s1hat)*(s2hat^2/(2*n2-2))
+    S=outt$out;
+    S=S[1:4,1:4];
+
+    # if (sum(is.infinite(S)) > 0 |
+    #     sum(is.nan(S)) > 0 |
+    #     sum(is.na(S)) > 0 |
+    #     sum(diag(S) < 0) > 0) {
+    #   stop("ERROR: The information matrix cannot be inverted - this might be due to the scale of the marker. Try rescaling the marker measurements by subtracting a constant or by dividing with a constant all marker measurements (of both groups) before you try again.")
+    # }
+
+    varde=t(derde)%*%S%*%t(t(derde));
+    vardp=t(derdp)%*%S%*%t(t(derdp));
+    covdedp=t(derde)%*%S%*%t(t(derdp));
+    ##########################################
+
+    vardeltase=varde;
+    vardeltasp=vardp;
+
+    #########################
 
     cutoff= (s1hat^2*m2hat-s2hat^2*m1hat-s1hat*s2hat*sqrt((m1hat-m2hat)^2+(s1hat^2-s2hat^2)*log(s1hat^2/s2hat^2)))/(s1hat^2-s2hat^2)
-
     deltasp= (((s1hat^2*m2hat-s2hat^2*m1hat-s1hat*s2hat*sqrt((m1hat-m2hat)^2+(s1hat^2-s2hat^2)*log(s1hat^2./s2hat^2)))/(s1hat^2-s2hat^2))-m1hat)/(s1hat)
     deltase= (m2hat-((s1hat^2*m2hat-s2hat^2*m1hat-s1hat*s2hat*sqrt((m1hat-m2hat)^2+(s1hat^2-s2hat^2)*log(s1hat^2/s2hat^2)))/(s1hat^2-s2hat^2)))/s2hat
 
@@ -184,10 +253,13 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     if (plots=="on"){
       points(1-Sp,Se, col = "red")
     }
+
     covdeltas = matrix( c(vardeltasp, covdedp, covdedp, vardeltase), nrow=2, ncol=2,  byrow = TRUE)        # fill m
 
-
-
+    # if (sum(is.infinite(covdeltas)) > 0 |
+    #     sum(is.nan(covdeltas)) > 0) {
+    #   stop("ERROR: The information matrix cannot be inverted - this might be due to the scale of the marker. Try rescaling the marker measurements by subtracting a constant or by dividing with a constant all marker measurements (of both groups) before you try again.")
+    # }
 
     svdA=svd(inv(covdeltas))
     a=sqrt(qchisq(1-alpha,2))/sqrt(svdA$d[1])
@@ -303,6 +375,8 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     S=inv(I)
 
     S=S[1:4,1:4]
+
+    ## EVERYTHING ELSE ================================================================================
 
     varauc=t(c(dm1,ds1,dm2,ds2))%*% S %*% t(t(c(dm1,ds1,dm2,ds2)))
 
@@ -469,17 +543,16 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
 
     }
 
-
-
     #return(list(transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam , transformation.parameter=lam, AUC=auc, AUCCI=CIauc, J=Jhat, JCI=CIJ, Sens=Se, CImarginalSens=margcise, Spec=Sp, CImarginalSpec=margcisp, cutoff=cutoff, CIcutoff=CIcutoff, areaegg=areaegg, arearect=arearect, mxlam=mean(transx), sxlam=std(transx), mylam=mean(transy), sylam=std(transy)))
 
     res <- matrix(c(auc,CIauc[1],CIauc[2],
                     Jhat,CIJ[1],CIJ[2],
                     cutoff,CIcutoff[1],CIcutoff[2],
                     Sp,margcisp[1],margcisp[2],
-                    Se,margcise[1],margcise[2]),ncol=3,byrow=TRUE)
+                    Se,margcise[1],margcise[2],
+                    lam,NA,NA),ncol=3,byrow=TRUE)
     colnames(res) <- c("Estimate","Confidence","Interval")
-    rownames(res) <- c("AUC","Jhat","cutoff","Sp","Se")
+    rownames(res) <- c("AUC","Jhat","cutoff","Sp","Se", "Lambda")
     res <- data.frame(res)
     res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
@@ -489,9 +562,9 @@ rocboxcox<-function(marker, D, alpha, plots, printProgress = FALSE){
     }
 
     return(list(transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam , transformation.parameter=lam, AUC=auc, AUCCI=CIauc, pvalueAUC=pvalauc, J=Jhat, JCI=CIJ, pvalueJ=pvalJ, Sens=Se, CImarginalSens=margcise, Spec=Sp, CImarginalSpec=margcisp, cutoff=cutoff, CIcutoff=CIcutoff,  areaegg=areaegg, arearect=arearect, mxlam=mean(transx), sxlam=sqrt(var(transx)*(length(transx)-1)/length(transx)), mylam=mean(transy), sylam=sqrt(var(transy)*(length(transy)-1)/length(transy)), results=res , rocfun=rocfun))
+    
   }
 }
-
 
 
 ## ---- echo=FALSE, eval=TRUE---------------------------------------------------
@@ -507,6 +580,11 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
     stop("ERROR: Please remove all missing data before running this function.")
   } else if (alpha <= 0 | alpha >= 1) {
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
+  } else if (!((sum(is.na(givenSP)) == 0 & sum(is.na(givenSE) > 0)) |
+               (sum(is.na(givenSE)) == 0 & sum(is.na(givenSP) > 0)))) {
+    stop("ERROR: Exactly one of 'givenSP' and 'givenSE' must be set to NA.")
+  } else if (sum(marker < 0) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     #graphics.off()
@@ -747,8 +825,8 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
 
 
     Spvalues=1-tt;FPRvalues=tt;
-    SEandCIs = matrix( c(Spvalues,FPRvalues, Sehat, CIROCvec1,CIROCvec2), nrow=length(CIROCvec1), ncol=5)
-    colnames(SEandCIs)  <- c("Given Sp","Given FPR", "Sehat","LL of 95%CI","UL of 95%CI")
+    SEandCIs = matrix( c(Spvalues, Sehat, CIROCvec1,CIROCvec2), nrow=length(CIROCvec1), ncol=4)
+    colnames(SEandCIs)  <- c("Given Sp", "Sehat","LL of 95%CI","UL of 95%CI")
     SEandCIs
 
     CIlowSe=CIROCvec1
@@ -850,7 +928,15 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
     CIlowSp=CIROCvec1
     CIuppSp=CIROCvec2
     CIsp=t(rbind(CIlowSp,CIuppSp))
-    return(list(SPandCIs=SPandCIs, SEandCIs=SEandCIs, Sevalues=Sevalues, Sphat=Sphat, CIsp=CIsp, Spvalues=Spvalues, Sphat=Sphat, CIse=CIse ))
+
+    return(list(SPandCIs=formattable(as.matrix(SPandCIs), digits = 4, format = "f"),
+                SEandCIs=formattable(as.matrix(SEandCIs), digits = 4, format = "f"),
+                Sevalues=Sevalues,
+                Sphat=Sphat,
+                CIsp=formattable(as.matrix(CIsp), digits = 4, format = "f"),
+                Spvalues=Spvalues,
+                Sehat=Sehat,
+                CIse=formattable(as.matrix(CIse), digits = 4, format = "f")))
 
 
   }
@@ -873,6 +959,8 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
     stop("ERROR: Controls must be assigned a value of 0; cases must be assigned a value of 1. Both controls and cases should be included in the dataset.")
   } else if (sum(is.na(marker)) > 0 | sum(is.na(D)) > 0) {
     stop("ERROR: Please remove all missing data before running this function.")
+  } else if (sum(marker < 0) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     statusD=D;
@@ -993,6 +1081,8 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
 
       par(mar = c(5.1, 4.1, 4.1, 2.1))
 
+      par(mfrow=c(1,1))
+
     }
 
 
@@ -1053,6 +1143,8 @@ comparebcAUC <-function (marker1, marker2, D, alpha, plots){
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
   } else if (sum(is.na(marker1)) > 0 | sum(is.na(marker2)) > 0 | sum(is.na(D)) > 0) {
     stop("ERROR: Please remove all missing data before running this function.")
+  } else if ((sum(marker1 < 0) > 0) | (sum(marker2 < 2)) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     erf <- function (x) 2 * pnorm(x * sqrt(2)) - 1
@@ -1530,19 +1622,33 @@ comparebcAUC <-function (marker1, marker2, D, alpha, plots){
 
     res <- data.frame(AUC1 = formattable(AUC1original, digits = 4, format = "f"),
                       AUC2 = formattable(AUC2original, digits = 4, format = "f"),
+                      diff = formattable(AUC2original - AUC1original, digits = 4, format = "f"),
                       p_value_probit = formattable(pval2t, digits = 4, format = "f"),
                       p_value = formattable(pval2tdAUC, digits = 4, format = "f"),
                       ci_ll = formattable(CIdiffdAUC[1], digits = 4, format = "f"),
                       ci_ul = formattable(CIdiffdAUC[2], digits = 4, format = "f"))
 
     rownames(res) <- c("Estimates:")
-    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    colnames(res) <- c("AUC 1", "AUC 2", "Diff", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
     res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
     #return(list(AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_difference= pval2t, CI_difference= pnorm(CIdiff), rocbc1=roc1, rocbc2=roc2))
-    return(list(resultstable=res,AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_probit_difference= pval2t, pvalue_difference= pval2tdAUC, CI_difference= CIdiffdAUC, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,
+                AUCmarker1=AUC1original,
+                AUCmarker2=AUC2original,
+                pvalue_probit_difference= pval2t,
+                pvalue_difference= pval2tdAUC,
+                CI_difference= CIdiffdAUC,
+                roc1=roc1,
+                roc2=roc2,
+                transx1=W1alam,
+                transy1=W1blam,
+                transformation.parameter.1 = lam[1],
+                transx2=W2alam,
+                transy2=W2blam,
+                transformation.parameter.2 = lam[2]))
 
   }
 }
@@ -1561,6 +1667,8 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
     stop("ERROR: The level of significance, alpha, should be set between 0 and 1. A common choice is 0.05.")
   } else if (sum(is.na(marker1)) > 0 | sum(is.na(marker2)) > 0 | sum(is.na(D)) > 0) {
     stop("ERROR: Please remove all missing data before running this function.")
+  } else if ((sum(marker1 < 0) > 0) | (sum(marker2 < 2)) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     erf <- function (x) 2 * pnorm(x * sqrt(2)) - 1
@@ -2084,20 +2192,33 @@ comparebcJ <-function (marker1, marker2, D, alpha, plots){
 
     res <- data.frame(J1 = formattable(J1original, digits = 4, format = "f"),
                       J2 = formattable(J2original, digits = 4, format = "f"),
+                      diff = formattable(J2original - J1original, digits = 4, format = "f"),
                       p_value_probit = formattable(pval2t, digits = 4, format = "f"),
                       p_value = formattable(pval2tJ, digits = 4, format = "f"),
                       ci_ll = formattable(CIoriginal[1], digits = 4, format = "f"),
                       ci_ul = formattable(CIoriginal[2], digits = 4, format = "f"))
 
     rownames(res) <- c("Estimates:")
-    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    colnames(res) <- c("J 1", "J 2", "Diff", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
     res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
     #return(list(AUCmarker1=AUC1original,AUCmarker2=AUC2original, pvalue_difference= pval2t, CI_difference= pnorm(CIdiff), rocbc1=roc1, rocbc2=roc2))
     #return(list(resultstable=res,J1=J1original,J2=J2original, pvalue_difference= pval2t, CI_difference= CIoriginal, rocbc1=roc1, rocbc2=roc2))
-    return(list(resultstable=res,J1=J1original,J2=J2original, pvalue_probit_difference= pval2t, pvalue_difference= pval2tJ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,
+                J1=J1original,
+                J2=J2original,
+                pvalue_probit_difference= pval2t,
+                pvalue_difference= pval2tJ,
+                CI_difference= CIoriginal,
+                roc1=roc1, roc2=roc2,
+                transx1=W1alam,
+                transy1=W1blam,
+                transformation.parameter.1 = lam[1],
+                transx2=W2alam,
+                transy2=W2blam,
+                transformation.parameter.2 = lam[2]))
 
   }
 
@@ -2120,6 +2241,8 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
     stop("ERROR: Please remove all missing data before running this function.")
   } else if ((!is.numeric(atSpec)) | (length(atSpec) != 1)) {
     stop("ERROR: 'atSpec' must be a single numeric value.")
+  } else if ((sum(marker1 < 0) > 0) | (sum(marker2 < 2)) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     erf <- function (x) 2 * pnorm(x * sqrt(2)) - 1
@@ -2450,8 +2573,8 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
     #############################################################################
     #==================AT A GIVEN T FOR THE ORIGINAL===================
 
-    ROC1or= qnorm(1-pnorm(qnorm(1-t,m1alam,s1alam),m1blam,s1blam));
-    ROC2or= qnorm(1-pnorm(qnorm(1-t,m2alam,s2alam),m2blam,s2blam));
+    ROC1or= (1-pnorm(qnorm(1-t,m1alam,s1alam),m1blam,s1blam));
+    ROC2or= (1-pnorm(qnorm(1-t,m2alam,s2alam),m2blam,s2blam));
 
 
     dm1a =    -(2^(1/2)*exp(-((m1ahat - m1bhat)/s1bhat + (2^(1/2)*s1ahat*erfcinv(2*t))/s1bhat)^2/2))/(2*s1bhat*pi^(1/2))
@@ -2522,13 +2645,14 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
 
     res <- data.frame(Sens1 = formattable(SE1, digits = 4, format = "f"),
                       Sens2 = formattable(SE2, digits = 4, format = "f"),
+                      diff = formattable(SE2 - SE1, digits = 4, format = "f"),
                       p_value_probit = formattable(pval2t, digits = 4, format = "f"),
                       p_value = formattable(pval2tZ, digits = 4, format = "f"),
                       ci_ll = formattable(CIoriginal[1], digits = 4, format = "f"),
                       ci_ul = formattable(CIoriginal[2], digits = 4, format = "f"))
 
     rownames(res) <- c("Estimates:")
-    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    colnames(res) <- c("Sens 1", "Sens 2", "Diff", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
     res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
@@ -2590,7 +2714,20 @@ comparebcSens <-function (marker1, marker2, D, atSpec, alpha, plots){
 
 
 
-    return(list(resultstable=res,Sens1=SE1,Sens2=SE2, pvalue_probit_difference= pval2t, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,
+                Sens1=SE1,
+                Sens2=SE2,
+                pvalue_probit_difference= pval2t,
+                pvalue_difference= pval2tZ,
+                CI_difference= CIoriginal,
+                roc1=roc1,
+                roc2=roc2,
+                transx1=W1alam,
+                transy1=W1blam,
+                transformation.parameter.1 = lam[1],
+                transx2=W2alam,
+                transy2=W2blam,
+                transformation.parameter.2 = lam[2]))
 
 
 
@@ -2614,6 +2751,8 @@ comparebcSpec <-function (marker1, marker2, D, atSens, alpha, plots){
     stop("ERROR: Please remove all missing data before running this function.")
   } else if ((!is.numeric(atSens)) | (length(atSens) != 1)) {
     stop("ERROR: 'atSens' must be a single numeric value.")
+  } else if ((sum(marker1 < 0) > 0) | (sum(marker2 < 2)) > 0) {
+    stop("ERROR: To use the Box-Cox transformation, all marker values must be positive.")
   } else {
 
     erf <- function (x) 2 * pnorm(x * sqrt(2)) - 1
@@ -2710,18 +2849,32 @@ comparebcSpec <-function (marker1, marker2, D, atSens, alpha, plots){
 
     res <- data.frame(FPR1 = formattable(FPR1, digits = 4, format = "f"),
                       FPR2 = formattable(FPR2, digits = 4, format = "f"),
+                      formattable(FPR2 - FPR1, digits = 4, format = "f"),
                       p_value_probit = formattable(pval2t, digits = 4, format = "f"),
                       p_value = formattable(pval2tZ, digits = 4, format = "f"),
                       ci_ll = formattable(CIoriginal[1], digits = 4, format = "f"),
                       ci_ul = formattable(CIoriginal[2], digits = 4, format = "f"))
     rownames(res) <- c("Estimates:")
-    colnames(res) <- c("AUC 1", "AUC 2", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
+    colnames(res) <- c("FPR 1", "FPR 2", "Diff", "P-Val (Probit)", "P-Val", "CI (LL)", "CI (UL)")
     res <- formattable(as.matrix(res), digits = 4, format = "f")
     res
 
 
     #return(list(resultstable=res,Sens1=SE1,Sens2=SE2, pvalue_probit_difference= pval2t, CI_probit_difference= CIZstar, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roc1, roc2=roc2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
-    return(list(resultstable=res,FPR1=FPR1,FPR2=FPR2, pvalue_probit_difference= pval2t, pvalue_difference= pval2tZ, CI_difference= CIoriginal, roc1=roct1, roc2=roct2, transx1=W1alam, transy1=W1blam, transx2=W2alam, transy2=W2blam))
+    return(list(resultstable=res,
+                FPR1=FPR1,
+                FPR2=FPR2,
+                pvalue_probit_difference= pval2t,
+                pvalue_difference= pval2tZ,
+                CI_difference= CIoriginal,
+                roc1=roct1,
+                roc2=roct2,
+                transx1=W1alam,
+                transy1=W1blam,
+                transformation.parameter.1 = out$transformation.parameter.1,
+                transx2=W2alam,
+                transy2=W2blam,
+                transformation.parameter.2 = out$transformation.parameter.2))
     #return(list(FPR1=FPR1))
 
 
