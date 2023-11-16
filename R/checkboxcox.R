@@ -89,7 +89,17 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
       pval4=test4$p.value
       pvalues=c(pval1,pval2,pval3,pval4)
 
-      return(list(transformation.parameter=lam,transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam,pvalues=pvalues))
+      res_shapiro = list(test_x = test1,
+                         test_y = test2,
+                         test_transx = test3,
+                         test_transy = test4)
+
+      return(list(transformation.parameter=lam,
+                  transx=((x^lam)-1)/lam,
+                  transy=((y^lam)-1)/lam,
+                  pvalues=pvalues,
+                  res_shapiro=res_shapiro))
+
     }
 
 
@@ -163,8 +173,18 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
     if (plots=="on") {
       # x11()
       par(mfrow = c(1, 1))
-      plot(linspace(0,1,1000),roc(linspace(0,1,1000)),main="Empirical and Box-Cox Based ROC",xlab="FPR = 1 - Specificity",ylab="TPR = Sensitivity",type="l",col="red")
-      lines(linspace(0,1,1000),linspace(0,1,1000),type="l", lty=2)
+      plot(linspace(0,1,1000),
+           roc(linspace(0,1,1000)),
+           main="Empirical and Box-Cox Based ROC",
+           xlab="FPR = 1 - Specificity",
+           ylab="TPR = Sensitivity",
+           type="l",
+           col="red")
+
+      lines(linspace(0,1,1000),
+            linspace(0,1,1000),
+            type="l",
+            lty=2)
       lines(roc.curve(scores, statusD), col=1)
 
       #================LEGEND OF THE ROC PLOT================
@@ -175,7 +195,15 @@ checkboxcox<-function(marker, D, plots, printShapiro = FALSE){
     }
 
     #================OUTPUT ARGUMENTS======================
-    return(list(transformation.parameter=lam,transx=((x^lam)-1)/lam, transy=((y^lam)-1)/lam, pval_x=pvalues[1], pval_y=pvalues[2],pval_transx=pvalues[3], pval_transy=pvalues[4], rocbc=roc ))
+    return(list(res_shapiro = cc$res_shapiro,
+                transformation.parameter=lam,
+                transx=((x^lam)-1)/lam,
+                transy=((y^lam)-1)/lam,
+                pval_x=pvalues[1],
+                pval_y=pvalues[2],
+                pval_transx=pvalues[3],
+                pval_transy=pvalues[4],
+                roc=roc))
 
   }
 }

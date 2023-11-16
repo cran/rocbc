@@ -44,7 +44,7 @@ rocboxcox(marker, D, alpha, plots, printProgress = FALSE)
   \item{mylam}{The mean of the marker scores of the diseased group after the Box-Cox transformation.}
   \item{sylam}{The standard deviation of the marker scores of the diseased group after the Box-Cox transformation.}
   \item{results}{A table that provides some indicative results: the AUC, the J (maximized Youden index), the estimated cutoff, the sensitivity, and the specificity along with their marginal CIs.}
-  \item{rocfun}{A function of the estimated Box-Cox ROC curve. You can use this to simply request TPR values for given FPR values.}
+  \item{roc}{A function of the estimated Box-Cox ROC curve. You can use this to simply request TPR values for given FPR values.}
 }
 
 \references{

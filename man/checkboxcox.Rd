@@ -2,7 +2,7 @@
 \alias{checkboxcox}
 
 \title{
-Tests whether Box-Cox is appropriate for the given dataset
+Tests whether Box-Cox is appropriate for the given dataset (one-marker version)
 }
 
 \description{
@@ -29,6 +29,7 @@ checkboxcox(marker, D, plots, printShapiro = FALSE)
   \item{pval_y}{The p-value of the Shapiro Wilk test of normality for the diseased group (before the Box-Cox transformation).}
   \item{pval_transx}{The p-value of the Shapiro Wilk test of normality for the healthy group (after the Box-Cox transformation).}
   \item{pval_transy}{The p-value of the Shapiro Wilk test of normality for the diseased group (after the Box-Cox transformation).}
+  \item{roc}{A function of the estimated Box-Cox ROC curve. You can use this to simply request TPR values for given FPR values.}
 }
 
 \references{
