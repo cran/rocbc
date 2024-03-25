@@ -5,8 +5,10 @@ importFrom("graphics", "hist", "legend", "lines", "par", "plot.new",
 importFrom("stats", "cov", "dnorm", "na.omit", "optim", "optimize",
            "pnorm", "qchisq", "qnorm", "qqline", "qqnorm", "sd",
            "shapiro.test", "var")
-importFrom("pracma", "std", "linspace", "fminsearch", "inv", "zeros", "erfcinv")
+importFrom("pracma", "std", "linspace", "fminsearch", "inv", "zeros", "erfcinv", "trapz")
 importFrom("clinfun", "roc.curve")
 importFrom("splancs", "areapl")
 importFrom("mvtnorm", "rmvnorm", "dmvnorm")
 importFrom("formattable", "formattable")
+importFrom("pROC", "roc", "auc")
+importFrom("MRMCaov", "roc_curves")
