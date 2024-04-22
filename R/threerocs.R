@@ -6,7 +6,7 @@ threerocs=function(marker, D, plots)
 
 
   # Plot the empirical ROC curve
-  roc_obj <- roc(D, marker)
+  roc_obj <- roc(D, marker, quiet = TRUE)
   auc_value <- auc(roc_obj)
   tpr=roc_obj$sensitivities
   fpr=1-roc_obj$specificities
@@ -40,11 +40,11 @@ threerocs=function(marker, D, plots)
                                      paste("Box-Cox (AUC = ", formattable(AUCbc, digits = 4, format = "f"), ")", sep = ""),
                                      paste("Metz (AUC = ", formattable(AUCmrm, digits = 4, format = "f"), ")", sep = "")),
            col = c("blue", "red", "forestgreen"),
-           lty = c("solid", "solid", "dashed"),
+           lty = c("solid", "dotted", "dashed"),
            cex = 0.8)
   }
 
-  return(list(AUC_Empirical = auc_value,
+  return(list(AUC_Empirical = as.numeric(auc_value),
               AUC_Metz = AUCmrm,
               AUC_BoxCox = AUCbc))
 
