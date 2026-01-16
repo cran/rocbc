@@ -1,4 +1,4 @@
-2654363ec1e3cc161597db0dbb4357e6 *DESCRIPTION
+e0c15307b7cf0a14052e97ba7364d0de *DESCRIPTION
 d731f5417deb8803554545c788e0b1d2 *NAMESPACE
 42d0ef3d82327c94967e48597621c413 *R/checkboxcox.R
 2525c2b969d259310eb267700b66fb60 *R/checkboxcox2.R
@@ -7,13 +7,13 @@ f82c63b81633baf7d90c448bdc3a00e0 *R/comparebcAUC.R
 5f9a2d7b1d7250dee35ce026e703ecd6 *R/comparebcSens.R
 73d87d8d01b800e11c056fd07990ae25 *R/comparebcSpec.R
 5e8295ad100d0b7442da0d0452896793 *R/rocboxcox.R
-28ce475bf1b818bfe22df8f721359dee *R/rocboxcoxCI.R
+aa00b97f2bf62063d66355e31576c5fe *R/rocboxcoxCI.R
 f672f15c7bde7f2c2f973f3d5bf23a7a *R/threerocs.R
 1fde4f5f86978e5ba8d374146618bce4 *R/threerocs2.R
-2acb78f2b9dc60fc330229ff61d918b8 *build/vignette.rds
+f280fcd15419dbdb872ddda2572f116c *build/vignette.rds
 985216d3e87e0589f063974be89fba97 *inst/doc/documentation_rocbc.R
 793eabec4b352f49c58b8192409850ac *inst/doc/documentation_rocbc.Rmd
-614f3e74f34940aa61f8bc00c0ea225e *inst/doc/documentation_rocbc.html
+57fd293ad890b408a0217bd216718bde *inst/doc/documentation_rocbc.html
 84dd82cd1cbb2e6890944e6233d1e2a3 *man/checkboxcox.Rd
 3ab1d2494f49d798602ca36b82f04a09 *man/checkboxcox2.Rd
 07684f2eb34e036aac6e1cd00e03555c *man/comparebcAUC.Rd

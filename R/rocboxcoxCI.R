@@ -284,34 +284,7 @@ rocboxcoxCI<-function(marker, D, givenSP, givenSE, alpha, plots){
     md=m2hat;
     n=n1;
     m=n2;
-    xlam=transx;
-    ylam=transy;
-    lam=cc$transformation.parameter
-    I[1,1]=n/sh^2;
-    I[2,2]=-(n/sh^2-3/sh^4*sum((xlam-mh)^2));
-    I[3,3]=m/sd^2;
-    I[4,4]=-(m/sd^2-3/sd^4*sum((ylam-md)^2));
 
-    kk=  sum(((mh - (x^lam - 1)/lam)*((2*(x^lam - 1))/lam^3 - (2*x^lam*log(x))/lam^2 + (x^lam*log(x)^2)/lam))/sh^2) + - sum(((y^lam - 1)/lam^2 - (y^lam*log(y))/lam)^2/sd^2) + - sum(((x^lam - 1)/lam^2 - (x^lam*log(x))/lam)^2/sh^2) + + sum(((md - (y^lam - 1)/lam)*((2*(y^lam - 1))/lam^3 - (2*y^lam*log(y))/lam^2 + (y^lam*log(y)^2)/lam))/sd^2);
-    I[5,5]=-kk ;
-
-    I[1,5]=sum(((2*(x^lam - 1))/lam^2 - (2*x^lam*log(x))/lam)/(2*sh^2));
-    I[2,5]=-sum((2*((x^lam - 1)/lam^2 - (x^lam*log(x))/lam)*(mh - (x^lam - 1)/lam))/sh^3);
-    I[3,5]=-sum(-((2*(y^lam - 1))/lam^2 - (2*y^lam*log(y))/lam)/(2*sd^2));
-
-
-    I[4,5]=-sum((2*((y^lam - 1)/lam^2 - (y^lam*log(y))/lam)*(md - (y^lam - 1)/lam))/sd^3);
-
-
-
-    I[5,1]=I[1,5]
-    I[5,2]=I[2,5]
-    I[5,3]=I[3,5]
-    I[5,4]=I[4,5]
-
-    S=inv(I)
-
-    S=S[1:4,1:4]
 
 
     pp=c(givenSE);
